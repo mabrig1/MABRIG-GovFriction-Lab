@@ -1,0 +1,13 @@
+# Local Cloudflare secrets and caches must not be committed
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+!.env.example
+.wrangler/
+node_modules/
+# Raw research data are kept in a separate protected archive by researchers
+data/
+*.partial.csv
+__pycache__/
+*.pyc
