@@ -10,7 +10,7 @@
 <body>
 <header class="topbar">
 <a class="brand" href="#home"><span class="mark" aria-hidden="true">M</span><span><strong>MABRIG</strong><small>GOVFRICTION LAB</small></span></a>
-<nav aria-label="Main navigation"><a href="#data">Data</a><a href="#methods">Methods</a><a href="#results">Results</a><a href="#cpu">CPU Lab</a><a href="#predict">Predict</a><a href="#compare">Validate</a></nav>
+<nav aria-label="Main navigation"><a href="#data">Data</a><a href="#methods">Methods</a><a href="#results">Results</a><a href="#cpu">CPU Lab</a><a href="#rlab">R Stats</a><a href="#contentlab">Content</a><a href="#vizlab">Charts</a><a href="#predict">Predict</a><a href="#compare">Validate</a></nav>
 <span class="version">BFS-DAI · RESEARCH PILOT</span>
 </header>
 <main id="home">
@@ -84,6 +84,69 @@
 <div class="compareout" id="cpuserverresult" role="status" aria-live="polite">Server analysis is optional and disabled until you consent.</div>
 </div>
 </div>
+</section>
+<section class="step" id="rlab" hidden>
+<div class="stephead"><span class="stepnum">R</span><div><h2>R Statistics Lab</h2><p>Choose variables, run actual R statistical tests, and export reproducible R scripts.</p></div></div>
+<p class="sub">This lab uses optional webR (R compiled to WebAssembly). The R runtime is downloaded only when you select Run in R; it needs internet the first time. Source records stay in your browser. Statistical assumptions remain your responsibility.</p>
+<div class="tabletitle"><h3>Variable View</h3><span id="rsummary" class="sub"></span></div>
+<div class="tablewrap"><table><thead><tr><th>Variable</th><th>Detected type</th><th>Valid</th><th>Missing</th><th>Distinct</th></tr></thead><tbody id="rvars"></tbody></table></div>
+<details><summary>Add a calculated numerical variable</summary>
+<div class="settings rsettings">
+<label>New variable name<input type="text" id="rnewname" placeholder="e.g. delay_adjusted" maxlength="48"></label>
+<label>Source variable<select id="rleft"></select></label>
+<label>Arithmetic operation<select id="roperator"><option value="+">Add (+)</option><option value="-">Subtract (−)</option><option value="*">Multiply (×)</option><option value="/">Divide (÷)</option></select></label>
+<label>Second variable or constant<select id="rright"></select></label>
+<label>Constant<input id="rconstant" type="number" value="1" step="any"></label>
+</div>
+<button class="secondary" type="button" id="rcreate">Add variable to this dataset</button>
+<p id="rcreatemessage" class="filemeta" role="status"></p>
+<button class="secondary" type="button" id="rexportdata">Download dataset with added variables (.csv)</button>
+</details>
+<h3>Select a statistical model</h3>
+<div class="settings">
+<label>R statistical method<select id="rmethod"><option value="descriptive">Descriptive statistics and mean CI</option><option value="pearson">Pearson correlation</option><option value="spearman">Spearman correlation</option><option value="welch">Welch independent t-test</option><option value="anova">One-way ANOVA</option><option value="linear">OLS linear regression</option><option value="chisquare">Chi-square independence</option></select></label>
+<label>X variable<select id="rx"></select></label>
+<label>Y variable<select id="ry"></select></label>
+<label>Group variable<select id="rgroup"></select></label>
+</div>
+<div class="actions"><button class="primary" type="button" id="rrun">Run in R (webR)</button><button class="secondary" type="button" id="rscript">Download reproducible R script</button></div>
+<div class="filemeta" id="rstatus" role="status" aria-live="polite">Choose variables, then run a supported statistical test.</div>
+<pre class="routput" id="routput" aria-live="polite">R results will appear here.</pre>
+</section>
+<section class="step" id="contentlab" hidden>
+<div class="stephead"><span class="stepnum">TXT</span><div><h2>Computational Content Analysis</h2><p>Measure word patterns, TF-IDF, bigrams, and transparent dictionary-coded themes.</p></div></div>
+<p class="sub">Select a text column from the uploaded CSV. No AI interpretation or secret external text upload is involved. The dictionary uses explicit whole-word/phrase matches; theme counts are lexical evidence, not inferred intent.</p>
+<div class="settings">
+<label>Text variable<select id="textcolumn"></select></label>
+<label>Minimum token length<input id="textmin" type="number" min="1" max="12" value="3"></label>
+<label>Top terms<input id="texttop" type="number" min="5" max="100" value="20"></label>
+</div>
+<label class="blocklabel" for="textthemes">Optional theme dictionary (one theme per line: Theme: phrase, phrase)</label>
+<textarea id="textthemes" rows="4" spellcheck="false" placeholder="Service delay: late collection, waiting, delayed
+Communication: no response, feedback, unanswered"></textarea>
+<button type="button" id="textanalyze" class="primary">Analyse text locally</button>
+<p id="textstatus" class="filemeta" role="status" aria-live="polite">Maximum 3,000 documents or 1.8 million characters per analysis.</p>
+<div id="textresults" hidden>
+<div id="textkpis" class="kpis"></div>
+<h3>Most frequent terms</h3><div class="tablewrap"><table><thead><tr><th>Term</th><th>Count</th></tr></thead><tbody id="textterms"></tbody></table></div>
+<h3>Highest TF-IDF terms</h3><div class="tablewrap"><table><thead><tr><th>Term</th><th>TF-IDF</th><th>Documents</th></tr></thead><tbody id="texttfidf"></tbody></table></div>
+<h3>Frequent bigrams</h3><div class="tablewrap"><table><thead><tr><th>Phrase</th><th>Count</th></tr></thead><tbody id="textbigrams"></tbody></table></div>
+<h3>Dictionary-coded themes</h3><div class="tablewrap"><table><thead><tr><th>Theme</th><th>Matching documents</th><th>Matches</th><th>Document percentage</th></tr></thead><tbody id="textthemesoutput"></tbody></table></div>
+<button id="textexport" type="button" class="secondary">Download content-analysis report (.json)</button>
+</div>
+</section>
+<section class="step" id="vizlab" hidden>
+<div class="stephead"><span class="stepnum">VIS</span><div><h2>Research Visualization Engine</h2><p>Create and export vector charts from dataset values and analysis outputs.</p></div></div>
+<div class="settings">
+<label>Source<select id="vizsource"><option value="dataset">Uploaded dataset</option><option value="content">Content word frequencies</option><option value="cpu">CPU monthly trends</option><option value="bfs">BFS-DAI service groups</option></select></label>
+<label>Chart type<select id="viztype"><option value="bar">Bar chart</option><option value="line">Line chart</option><option value="scatter">Scatter plot</option><option value="histogram">Histogram</option></select></label>
+<label>X variable<select id="vizx"></select></label>
+<label>Y variable (optional for bar/line)<select id="vizy"></select></label>
+<label>Maximum chart categories<input id="vizmax" type="number" min="3" max="100" value="20"></label>
+</div>
+<div class="actions"><button type="button" id="vizdraw" class="primary">Generate chart</button><button type="button" id="vizsvg" class="secondary" disabled>Download chart SVG</button><button type="button" id="vizcsv" class="secondary" disabled>Download plotted data CSV</button></div>
+<p id="vizstatus" class="filemeta" role="status" aria-live="polite">Charts are rendered locally. No external image API is required.</p>
+<div id="vizcanvas" class="vizcanvas" role="region" aria-label="Research chart"></div>
 </section>
 <section class="step" id="predict" hidden>
 <div class="stephead"><span class="stepnum">04</span><div><h2>Predict 30-day nonclosure</h2><p>Compare statistical prediction models on a later time period—not the training records.</p></div></div>
