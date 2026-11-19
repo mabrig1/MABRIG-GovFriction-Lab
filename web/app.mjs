@@ -17,7 +17,7 @@ async function hashText(text){
 async function loadCSV(text,name){
  const parsed=parseCSV(text);
  dataset=parsed;mapping=autoMap(parsed.headers);filename=name;sha=await hashText(text);report=null;prediction=null;cpuResult=null;
- $('results').hidden=true;$('cpu').hidden=true;$('cpuoutput').hidden=true;$('predict').hidden=true;$('predictresults').hidden=true;$('predictcomparison').textContent='No independent prediction report uploaded.';$('analyze').disabled=false;$('mapping').hidden=false;
+ $('results').hidden=true;$('cpu').hidden=true;$('cpuoutput').hidden=true;$('cpucompareout').textContent='Independent CPU comparison not yet run.';$('predict').hidden=true;$('predictresults').hidden=true;$('predictcomparison').textContent='No independent prediction report uploaded.';$('analyze').disabled=false;$('mapping').hidden=false;
  $('filemeta').textContent=name+' · '+int(parsed.data.length)+' parsed rows · '+int(parsed.malformed)+' malformed CSV rows · SHA-256: '+(sha||'Unavailable. Serve the page via HTTPS or localhost.');
  $('compareout').textContent='Run analysis first, then select the independent Kaggle results file.';
  const target=$('mapgrid');target.replaceChildren();
@@ -279,6 +279,7 @@ function showCPU(){
   table.append(tbody);panel.append(table);curves.append(panel);
  }
  drawCpuGroups();
+ $('cpucompareout').textContent='Choose the Kaggle advanced_cpu_kaggle_groups.csv file for independent verification.';
  $('cpuoutput').hidden=false;
 }
 function drawCpuGroups(){
@@ -326,4 +327,36 @@ $('cpuserver').addEventListener('click',async()=>{
     '\nRecords (aggregated only): '+int(data.total)+'\n'+data.notes.join(' ');
  }catch(error){$('cpuserverresult').textContent='Server aggregate calculation failed: '+error.message}
  finally{$('cpuserver').disabled=!$('cpuconsent').checked||!backendReady}
+});
+
+
+$('cpucompare').addEventListener('change',async event=>{
+ if(!cpuResult||!sha){$('cpucompareout').textContent='Run local CPU research analysis first.';return}
+ const file=event.target.files?.[0];if(!file)return;
+ try{
+  if(file.size>5*1024*1024)throw Error('Kaggle reference CSV exceeds 5 MB.');
+  const parsed=parseCSV(await file.text());
+  if(parsed.malformed>0)throw Error('Malformed rows found in independent CSV.');
+  const reference=parsed.data;
+  if(reference.length!==cpuResult.groups.length)throw Error('Group coverage mismatch: app '+cpuResult.groups.length+' vs Kaggle '+reference.length);
+  const table=new Map();
+  for(const row of reference){
+   if(row.source_sha256!==sha)throw Error('Frozen source SHA-256 differs; cannot compare separate dataset versions.');
+   const key=row.service+'\u001f'+row.borough;
+   if(table.has(key))throw Error('Duplicate independent group: '+key.replace('\u001f',' / '));
+   table.set(key,row);
+  }
+  const failures=[];
+  for(const g of cpuResult.groups){
+   const key=g.service+'\u001f'+g.name,ref=table.get(key);
+   if(!ref){failures.push(g.service+' / '+g.name+': missing');continue}
+   if(Number(ref.n)!==g.n||Number(ref.nonclosed)!==g.nonclosed||
+      ['rate','wilson95Low','wilson95High'].some(name=>!Number.isFinite(Number(ref[name]))||Math.abs(Number(ref[name])-g[name])>1e-9))
+     failures.push(g.service+' / '+g.name+': numerical difference');
+   table.delete(key);
+  }
+  if(table.size)failures.push('Extra independent groups: '+table.size);
+  $('cpucompareout').textContent=failures.length?'REVIEW NEEDED · '+failures.length+' disagreement(s):\n'+failures.join('\n')
+    :'PASS: all '+cpuResult.groups.length+' groups match Kaggle counts, rates, confidence intervals and source SHA-256. Numerical agreement does not prove conceptual validity.';
+ }catch(error){$('cpucompareout').textContent='Comparison stopped: '+error.message}
 });
