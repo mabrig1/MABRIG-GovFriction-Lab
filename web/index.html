@@ -10,7 +10,7 @@
 <body>
 <header class="topbar">
 <a class="brand" href="#home"><span class="mark" aria-hidden="true">M</span><span><strong>MABRIG</strong><small>GOVFRICTION LAB</small></span></a>
-<nav aria-label="Main navigation"><a href="#data">Data</a><a href="#methods">Methods</a><a href="#results">Results</a><a href="#compare">Validate</a></nav>
+<nav aria-label="Main navigation"><a href="#data">Data</a><a href="#methods">Methods</a><a href="#results">Results</a><a href="#predict">Predict</a><a href="#compare">Validate</a></nav>
 <span class="version">BFS-DAI · RESEARCH PILOT</span>
 </header>
 <main id="home">
@@ -21,7 +21,7 @@
 <div class="hero-notes"><span>Works on mobile & desktop</span><span>No registration</span><span>Local CSV analysis</span><span>Independent Kaggle checks</span></div>
 </section>
 <div class="notice" role="note"><strong>Research boundary:</strong> This tool measures recorded request closure, not verified physical resolution or government efficiency. Its built-in demonstration is <strong>synthetic</strong>—never present demo numbers as NYC findings.</div>
-<div class="workflow" aria-label="Research workflow"><span>1 · Import</span><span>2 · Audit</span><span>3 · Analyse</span><span>4 · Validate</span><span>5 · Export</span></div>
+<div class="workflow" aria-label="Research workflow"><span>1 · Import</span><span>2 · Audit</span><span>3 · Analyse</span><span>4 · Predict</span><span>5 · Validate & Export</span></div>
 <section class="step" id="data">
 <div class="stephead"><span class="stepnum">01</span><div><h2>Upload administrative data</h2><p>Bring a frozen CSV research dataset. Files stay in your browser tab.</p></div></div>
 <div class="uploadrow">
@@ -57,8 +57,24 @@
 <p class="sub">Higher scores reflect longer documented closure times and/or more disparity with other boroughs for the same service. Small groups are suppressed. Confidence intervals for the composite index are not yet available.</p>
 <div class="actions"><button type="button" id="reportjson" class="secondary">Download research record (.json)</button><button type="button" id="resultcsv" class="secondary">Download group table (.csv)</button></div>
 </section>
+<section class="step" id="predict" hidden>
+<div class="stephead"><span class="stepnum">04</span><div><h2>Predict 30-day nonclosure</h2><p>Compare statistical prediction models on a later time period—not the training records.</p></div></div>
+<div class="rules"><strong>Creation-time predictors only:</strong> service, borough, creation weekday and hour. Closure and current status are <strong>never</strong> used as predictors. The model is not a verified assessment of actual service resolution.</div>
+<button id="runprediction" type="button" class="primary">Evaluate predictive models</button>
+<div id="predictmessage" role="status" aria-live="polite" class="filemeta">Requires at least 40 historical training cases, 20 later test cases, both outcome classes, and a full follow-up gap between training and testing.</div>
+<div id="predictresults" hidden>
+<h3>Out-of-sample performance</h3>
+<p class="sub" id="predictwindow"></p>
+<div class="tablewrap"><table><thead><tr><th>Model</th><th>Accuracy</th><th>Balanced accuracy</th><th>Recall</th><th>Precision</th><th>ROC-AUC</th><th>Brier ↓</th><th>Log loss ↓</th></tr></thead><tbody id="predictmetrics"></tbody></table></div>
+<p class="sub">Higher ROC-AUC is better; lower Brier score and log loss are better. Accuracy is reported at a fixed threshold of 50%. Baseline comparison is essential. Results are exploratory, not certified predictive performance.</p>
+<h3>Probability calibration · held-out requests</h3>
+<div id="predictcalibration" class="calibrationgrid"></div>
+<details><summary>Explore logistic regression coefficients (odds ratios)</summary><div class="tablewrap"><table><thead><tr><th>Predictor</th><th>Coefficient</th><th>Odds ratio</th></tr></thead><tbody id="predictcoefs"></tbody></table></div><p class="sub">Coefficients are conditional associations, not causal effects; sample uncertainty is not estimated in this pilot.</p></details>
+<div class="actions"><button type="button" id="downloadprediction" class="secondary">Download prediction evaluation (.json)</button></div>
+</div>
+</section>
 <section class="step" id="compare">
-<div class="stephead"><span class="stepnum">04</span><div><h2>Validate with Kaggle</h2><p>Compare this browser calculation to the independently written Python notebook.</p></div></div>
+<div class="stephead"><span class="stepnum">05</span><div><h2>Validate with Kaggle</h2><p>Compare this browser calculation to the independently written Python notebook.</p></div></div>
 <p class="sub">Use the exact same frozen CSV for both routes. A mismatch in the dataset SHA-256 stops the comparison rather than pretending the results are comparable.</p>
 <label class="comparefile">Choose independent Kaggle results CSV <input id="comparefile" type="file" accept=".csv,text/csv"></label>
 <div class="compareout" id="compareout" aria-live="polite">Run analysis first, then upload independent reference results.</div>
