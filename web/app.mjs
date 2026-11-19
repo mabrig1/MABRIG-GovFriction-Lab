@@ -1,7 +1,7 @@
 import {autoMap,parseCSV,analyze,exportCSV,compareReports,DEFAULTS} from './engine.mjs';
 import {evaluatePredictionModels} from './prediction.mjs';
 const $=id=>document.getElementById(id);
-let dataset=null,mapping=null,report=null,prediction=null,sha=null,filename='';
+let dataset=null,mapping=null,report=null,prediction=null,cpuResult=null,backendReady=false,sha=null,filename='';
 const required=['id','created','closed','agency','service','borough'];
 const titles={id:'Request ID',created:'Creation timestamp',closed:'Closure timestamp',agency:'Agency',service:'Service / problem',borough:'Borough',status:'Recorded status (optional)'};
 const int=n=>Number.isFinite(n)?n.toLocaleString('en-US'):'—';
@@ -16,8 +16,8 @@ async function hashText(text){
 }
 async function loadCSV(text,name){
  const parsed=parseCSV(text);
- dataset=parsed;mapping=autoMap(parsed.headers);filename=name;sha=await hashText(text);report=null;prediction=null;
- $('results').hidden=true;$('predict').hidden=true;$('predictresults').hidden=true;$('predictcomparison').textContent='No independent prediction report uploaded.';$('analyze').disabled=false;$('mapping').hidden=false;
+ dataset=parsed;mapping=autoMap(parsed.headers);filename=name;sha=await hashText(text);report=null;prediction=null;cpuResult=null;
+ $('results').hidden=true;$('cpu').hidden=true;$('cpuoutput').hidden=true;$('predict').hidden=true;$('predictresults').hidden=true;$('predictcomparison').textContent='No independent prediction report uploaded.';$('analyze').disabled=false;$('mapping').hidden=false;
  $('filemeta').textContent=name+' · '+int(parsed.data.length)+' parsed rows · '+int(parsed.malformed)+' malformed CSV rows · SHA-256: '+(sha||'Unavailable. Serve the page via HTTPS or localhost.');
  $('compareout').textContent='Run analysis first, then select the independent Kaggle results file.';
  const target=$('mapgrid');target.replaceChildren();
@@ -61,9 +61,9 @@ $('analyze').addEventListener('click',()=>{
  if(!dataset)return;
  try{
   const config={from:$('from').value,to:$('to').value,snapshot:$('snapshot').value,horizonDays:Number($('horizon').value),minN:Number($('minN').value),wFriction:Number($('weight').value)/100};
-  report=analyze(dataset.data,mapping,config);prediction=null;
+  report=analyze(dataset.data,mapping,config);prediction=null;cpuResult=null;
   report.source={filename,sha256:sha,parsedRows:dataset.data.length,malformedCSVRows:dataset.malformed,synthetic:filename.startsWith('SYNTHETIC')};
-  showReport();$('results').hidden=false;$('predict').hidden=false;$('predictresults').hidden=true;$('predictcomparison').textContent='Run prediction before importing independent model metrics.';$('predictmessage').textContent='Ready for leakage-safe temporal evaluation. The held-out test period is never used for training.';$('results').scrollIntoView({behavior:'smooth',block:'start'});
+  showReport();$('results').hidden=false;$('cpu').hidden=false;$('cpuoutput').hidden=true;$('cpustatus').textContent='Ready to run CPU analysis locally. No records will be uploaded.';$('predict').hidden=false;$('predictresults').hidden=true;$('predictcomparison').textContent='Run prediction before importing independent model metrics.';$('predictmessage').textContent='Ready for leakage-safe temporal evaluation. The held-out test period is never used for training.';$('results').scrollIntoView({behavior:'smooth',block:'start'});
  }catch(error){alert('Analysis stopped: '+error.message)}
 });
 function showReport(){
@@ -209,4 +209,121 @@ $('predictreference').addEventListener('change',async event=>{
   lines.push('\nCheck any differences against estimation method, priors and numerical convergence. Similar metrics support reproducibility; they do not establish substantive validity.');
   $('predictcomparison').textContent=lines.join('\n');
  }catch(error){$('predictcomparison').textContent='Independent prediction comparison withheld: '+error.message}
+});
+
+
+async function checkBackend(){
+ try{
+  const response=await fetch('/api/health',{cache:'no-store',headers:{accept:'application/json'}});
+  if(!response.ok||!(response.headers.get('content-type')||'').includes('application/json'))throw Error('Not a Worker API');
+  const status=await response.json();
+  if(status.runtime!=='cloudflare-worker')throw Error('No Worker runtime');
+  backendReady=status.serverAggregateAnalysis===true;
+  $('backendstatus').textContent='Cloudflare Worker connected · API running · environment variables enabled · server aggregate analysis '+(backendReady?'available':'disabled');
+  $('backendstatus').className='backendstatus connected';
+ }catch{
+  backendReady=false;
+  $('backendstatus').className='backendstatus disconnected';
+  $('backendstatus').textContent='Static-only deployment or Worker API currently unavailable. Browser data analysis still works; Cloudflare variables require the Worker deployment.';
+ }
+ $('cpuserver').disabled=!backendReady||!$('cpuconsent').checked||!cpuResult;
+}
+checkBackend();
+
+function runBrowserJob(type,rows,columnMapping,config){
+ if(typeof Worker==='undefined')return Promise.reject(Error('Your browser does not support CPU Workers. Try a modern desktop browser.'));
+ return new Promise((resolve,reject)=>{
+  const worker=new Worker('./cpu-worker.mjs',{type:'module'});
+  const jobId='job-'+Math.random().toString(36).slice(2);
+  const timeout=setTimeout(()=>finish(Error('Analysis exceeded the 90-second browser CPU limit. Try a smaller frozen cohort.')),90000);
+  let ended=false;
+  function finish(error,result){
+   if(ended)return;ended=true;clearTimeout(timeout);worker.terminate();
+   error?reject(error):resolve(result);
+  }
+  worker.onmessage=event=>{
+   const data=event.data||{};
+   if(data.jobId!==jobId)return;
+   data.ok?finish(null,data.result):finish(Error(data.error||'CPU job failed.'));
+  };
+  worker.onerror=()=>finish(Error('Browser CPU Worker could not load or execute.'));
+  worker.postMessage({type,rows,mapping:columnMapping,config,jobId});
+ });
+}
+function showCPU(){
+ const selected=$('cpuservice'),previous=selected.value;
+ selected.replaceChildren();
+ for(const service of cpuResult.aggregateByService){
+  const option=make('option','',service.service);option.value=service.service;selected.append(option);
+ }
+ if([...selected.options].some(x=>x.value===previous))selected.value=previous;
+ const monthly=$('cputrends');monthly.replaceChildren();
+ for(const r of cpuResult.trends){
+  const tr=make('tr');
+  for(const val of [r.month,r.service,int(r.n),pct(r.rate),pct(r.wilson95Low)+'–'+pct(r.wilson95High)])tr.append(make('td','',val));
+  monthly.append(tr);
+ }
+ const curves=$('cpusurvival');curves.replaceChildren();
+ for(const c of cpuResult.survival){
+  const panel=make('div','survivalpanel');
+  panel.append(make('strong','',c.service+' · n='+int(c.n)+' · median time-to-closure: '+(c.medianClosedDays===null?'not reached':c.medianClosedDays.toFixed(1)+' days')));
+  const table=make('table'),head=make('thead'),row=make('tr');
+  for(const v of ['Follow-up day','Still not recorded closed','95% approximate interval'])row.append(make('th','',v));
+  head.append(row);table.append(head);
+  const tbody=make('tbody');
+  for(const v of c.byDay){
+   const tr=make('tr');
+   for(const val of [v.day,pct(v.remaining),pct(v.lower95)+'–'+pct(v.upper95)])tr.append(make('td','',val));
+   tbody.append(tr);
+  }
+  table.append(tbody);panel.append(table);curves.append(panel);
+ }
+ drawCpuGroups();
+ $('cpuoutput').hidden=false;
+}
+function drawCpuGroups(){
+ if(!cpuResult)return;
+ const service=$('cpuservice').value, tbody=$('cpugroups');tbody.replaceChildren();
+ for(const g of cpuResult.groups.filter(x=>x.service===service)){
+  const row=make('tr');
+  for(const val of [g.name,int(g.n),int(g.nonclosed),pct(g.rate),pct(g.wilson95Low)+'–'+pct(g.wilson95High)])row.append(make('td','',val));
+  row.title=g.n<30?'Small sample: interval and group rate are exploratory.':'Wilson 95% interval';
+  tbody.append(row);
+ }
+ $('cpuconsent').checked=false;
+ $('cpuserver').disabled=true;
+ $('cpuserverresult').textContent='Server aggregate test has not run for this service.';
+}
+$('cpuservice').addEventListener('change',drawCpuGroups);
+$('cpuconsent').addEventListener('change',()=>{$('cpuserver').disabled=!backendReady||!$('cpuconsent').checked||!cpuResult});
+$('runcpu').addEventListener('click',async()=>{
+ if(!dataset||!report){$('cpustatus').textContent='Import data and run the audited index analysis first.';return}
+ $('runcpu').disabled=true;$('cpustatus').textContent='Running analytical CPU thread: stratified rates, Wilson intervals, trends, survival curves…';
+ try{
+  cpuResult=await runBrowserJob('research',dataset.data,mapping,report.config);
+  if(cpuResult.audit.eligible!==report.counts.eligible)throw Error('Research CPU group audit differs from the BFS-DAI record count. Report withheld.');
+  cpuResult.source={filename,sha256:sha,synthetic:report.source.synthetic};
+  showCPU();
+  $('cpustatus').textContent='Completed locally on '+int(cpuResult.eligible)+' eligible requests'+(report.source.synthetic?' · SYNTHETIC demonstration only.':'.');
+ }catch(error){cpuResult=null;$('cpuoutput').hidden=true;$('cpustatus').textContent='CPU analysis stopped: '+error.message}
+ finally{$('runcpu').disabled=false}
+});
+$('cpudownload').addEventListener('click',()=>{
+ if(cpuResult)download(JSON.stringify(cpuResult,null,2),'govfriction-cpu-research-report.json','application/json');
+});
+$('cpuserver').addEventListener('click',async()=>{
+ if(!cpuResult||!backendReady||!$('cpuconsent').checked)return;
+ const match=cpuResult.aggregateByService.find(s=>s.service===$('cpuservice').value);
+ if(!match){$('cpuserverresult').textContent='No comparable groups.';return}
+ $('cpuserver').disabled=true;$('cpuserverresult').textContent='Sending selected service aggregate counts to Cloudflare Worker for statistical testing…';
+ try{
+  const response=await fetch('/api/analysis/contingency',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({groups:match.groups})});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Worker API returned '+response.status);
+  $('cpuserverresult').textContent='Cloudflare Worker calculated Pearson χ² = '+dec(data.chiSquare)+
+    ' · df = '+int(data.degreesOfFreedom)+' · p-value = '+(data.pValue===null?'withheld (small expected counts)':data.pValue.toPrecision(4))+
+    ' · Cramér V = '+dec(data.cramersV)+
+    '\nRecords (aggregated only): '+int(data.total)+'\n'+data.notes.join(' ');
+ }catch(error){$('cpuserverresult').textContent='Server aggregate calculation failed: '+error.message}
+ finally{$('cpuserver').disabled=!$('cpuconsent').checked||!backendReady}
 });
