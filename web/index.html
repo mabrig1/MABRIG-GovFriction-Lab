@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#124a45">
+<meta name="description" content="MABRIG GovFriction Lab — an auditable, local-first web research instrument for administrative service-delay and disparity analysis.">
+<title>MABRIG GovFriction Lab | BFS-DAI Research Workstation</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header class="topbar">
+<a class="brand" href="#home"><span class="mark" aria-hidden="true">M</span><span><strong>MABRIG</strong><small>GOVFRICTION LAB</small></span></a>
+<nav aria-label="Main navigation"><a href="#data">Data</a><a href="#methods">Methods</a><a href="#results">Results</a><a href="#compare">Validate</a></nav>
+<span class="version">BFS-DAI · RESEARCH PILOT</span>
+</header>
+<main id="home">
+<section class="hero">
+<div class="eyebrow">COMPUTATIONAL PUBLIC ADMINISTRATION · WEB APP</div>
+<h1>Make administrative friction <em>measurable.</em></h1>
+<p>Go from service-request records to transparent delay statistics, within-service geographic comparisons, and research-ready exports—without handing your dataset to a remote AI service.</p>
+<div class="hero-notes"><span>Works on mobile & desktop</span><span>No registration</span><span>Local CSV analysis</span><span>Independent Kaggle checks</span></div>
+</section>
+<div class="notice" role="note"><strong>Research boundary:</strong> This tool measures recorded request closure, not verified physical resolution or government efficiency. Its built-in demonstration is <strong>synthetic</strong>—never present demo numbers as NYC findings.</div>
+<div class="workflow" aria-label="Research workflow"><span>1 · Import</span><span>2 · Audit</span><span>3 · Analyse</span><span>4 · Validate</span><span>5 · Export</span></div>
+<section class="step" id="data">
+<div class="stephead"><span class="stepnum">01</span><div><h2>Upload administrative data</h2><p>Bring a frozen CSV research dataset. Files stay in your browser tab.</p></div></div>
+<div class="uploadrow">
+<label class="filebox" for="file"><span class="fileicon">↑</span><strong>Select administrative CSV</strong><span>Up to 15 MB · NYC 311-compatible columns</span><input id="file" type="file" accept=".csv,text/csv"></label>
+<div class="or">or</div>
+<button type="button" class="secondary" id="demo">Explore synthetic example</button>
+</div>
+<div class="filemeta" id="filemeta" aria-live="polite">No dataset loaded. You can start with the synthetic demonstration.</div>
+<div id="mapping" hidden><h3>Map your columns</h3><p class="sub">Auto-mapping can be adjusted; the source field labelled “Problem” corresponds to <code>complaint_type</code>.</p><div class="mapgrid" id="mapgrid"></div></div>
+</section>
+<section class="step" id="methods">
+<div class="stephead"><span class="stepnum">02</span><div><h2>Confirm your research protocol</h2><p>Every setting is recorded in the exported analysis JSON.</p></div></div>
+<div class="settings">
+<label>Study start (inclusive)<input type="date" id="from" value="2025-01-01"></label>
+<label>Study end (exclusive)<input type="date" id="to" value="2025-04-01"></label>
+<label>Record snapshot date<input type="date" id="snapshot" value="2026-11-19"></label>
+<label>Follow-up horizon (days)<input type="number" id="horizon" min="1" max="365" value="30"></label>
+<label>Minimum comparable records<input type="number" id="minN" min="1" max="10000" value="10"></label>
+<label>Friction weight <output id="weightOut">70%</output><input id="weight" type="range" min="0" max="100" value="70" aria-label="Friction weight percentage"></label>
+</div>
+<div class="rules"><b>Frozen pilot scope:</b> DSNY · Graffiti & Missed Collection (All Materials) · five NYC boroughs. Comparisons are within the same service category; scores and weights are exploratory.</div>
+<button type="button" id="analyze" class="primary" disabled>Run audited analysis</button>
+<p class="sub">Friction = mean of 30-day nonclosure and restricted closure-delay burden. Composite BFS-DAI = 100 × [weight × friction + (1 − weight) × same-service peer asymmetry].</p>
+</section>
+<section class="step" id="results" hidden>
+<div class="stephead"><span class="stepnum">03</span><div><h2>Explore research findings</h2><p>All included records, exclusions and limitations remain visible.</p></div></div>
+<p id="resultstate" class="sourceflag"></p>
+<div id="kpis" class="kpis"></div>
+<h3>Audit trail and eligibility</h3><div id="audit" class="audit"></div>
+<div class="tabletitle"><h3>Service-by-borough comparison</h3><label>Filter service <select id="filterService"><option value="all">All services</option></select></label></div>
+<div class="tablewrap"><table><thead><tr><th>Service / borough</th><th>Records</th><th>Not closed by horizon</th><th>Delay burden</th><th>Peer disparity</th><th>BFS-DAI</th></tr></thead><tbody id="tablebody"></tbody></table></div>
+<h3>Comparative profile</h3><div id="bars" class="bars"></div>
+<p class="sub">Higher scores reflect longer documented closure times and/or more disparity with other boroughs for the same service. Small groups are suppressed. Confidence intervals for the composite index are not yet available.</p>
+<div class="actions"><button type="button" id="reportjson" class="secondary">Download research record (.json)</button><button type="button" id="resultcsv" class="secondary">Download group table (.csv)</button></div>
+</section>
+<section class="step" id="compare">
+<div class="stephead"><span class="stepnum">04</span><div><h2>Validate with Kaggle</h2><p>Compare this browser calculation to the independently written Python notebook.</p></div></div>
+<p class="sub">Use the exact same frozen CSV for both routes. A mismatch in the dataset SHA-256 stops the comparison rather than pretending the results are comparable.</p>
+<label class="comparefile">Choose independent Kaggle results CSV <input id="comparefile" type="file" accept=".csv,text/csv"></label>
+<div class="compareout" id="compareout" aria-live="polite">Run analysis first, then upload independent reference results.</div>
+<p class="sub">Download the notebook from the <a href="https://github.com/mabrig1/MABRIG-GovFriction-Lab" target="_blank" rel="noopener noreferrer">GitHub research repository</a>. Numerical agreement alone does not establish measurement validity.</p>
+</section>
+<section class="helpstep">
+<h2>Designed for responsible research</h2><div class="helpgrid"><div><strong>Privacy first</strong><p>No account, tracking service or raw-data upload endpoint. Research data remain in the current browser tab.</p></div><div><strong>Reproducible</strong><p>Freeze your source CSV and keep its checksum together with analysis rules and excluded-record counts.</p></div><div><strong>No exaggerated claims</strong><p>Administrative records can show patterns, not automatically explain what caused them.</p></div></div>
+</section>
+</main>
+<footer><span>© 2026 MABRIG Technologies · Research prototype</span><span><a href="https://github.com/mabrig1/MABRIG-GovFriction-Lab" target="_blank" rel="noopener noreferrer">Source and methodology</a></span></footer>
+<script type="module" src="./app.mjs"></script>
+</body></html>
