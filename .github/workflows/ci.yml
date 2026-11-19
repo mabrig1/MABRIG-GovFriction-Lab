@@ -1,0 +1,23 @@
+name: GovFriction Lab CI
+on:
+  push:
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test JavaScript analytics and checksum guards
+        run: npm test
+      - name: Verify static web assets and notebook
+        run: npm run build
+      - name: Check Python data downloader syntax
+        run: python -m py_compile reference/fetch_nyc311.py

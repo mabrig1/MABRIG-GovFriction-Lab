@@ -1,0 +1,12 @@
+{
+  "name": "mabrig-govfriction-lab",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Auditable browser-first Bureaucratic Friction & Service Delivery Asymmetry research app",
+  "scripts": {
+    "test": "node tests/test_engine.mjs",
+    "build": "node scripts/verify_assets.mjs",
+    "deploy": "npx wrangler deploy"
+  }
+}
