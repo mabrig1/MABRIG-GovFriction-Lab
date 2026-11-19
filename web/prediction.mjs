@@ -34,7 +34,9 @@ export function preparePredictionRows(rows,mapping,custom={}){
   if(snapshot-created<cfg.horizonDays*DAY){audit.immature++;continue}
   const days=closed===null||closed>snapshot?Infinity:(closed-created)/DAY;
   const t=new Date(created),dow=t.getUTCDay(),hour=t.getUTCHours();
-  ready.push({created,service,borough,dow,hour,label:days>cfg.horizonDays?1:0});
+  ready.push({created,service,borough,dow,hour,label:days>cfg.horizonDays?1:0,
+   observationDays:Math.min(cfg.horizonDays,Number.isFinite(days)?days:cfg.horizonDays),
+   observedClosure:Number.isFinite(days)&&days<=cfg.horizonDays?1:0});
  }
  audit.eligible=ready.length;
  return {ready,audit,config:cfg};

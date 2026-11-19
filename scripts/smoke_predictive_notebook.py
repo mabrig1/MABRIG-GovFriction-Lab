@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent.parent
 REFERENCE=ROOT/"reference/GovFriction_Predictive_Kaggle.ipynb"
-for path in [ROOT/"reference/GovFriction_Kaggle_Reference.ipynb",REFERENCE]:
+for path in [ROOT/"reference/GovFriction_Kaggle_Reference.ipynb",REFERENCE,ROOT/"reference/GovFriction_Advanced_CPU_Kaggle.ipynb"]:
     nb=json.loads(path.read_text())
     for n,cell in enumerate(nb["cells"],1):
         if cell["cell_type"]=="code":
@@ -45,3 +45,15 @@ with tempfile.TemporaryDirectory() as folder:
     assert Path("prediction_kaggle_manifest.json").is_file()
     assert Path("prediction_kaggle_calibration.csv").is_file()
     print("PASS independent scikit-learn notebook execution on 900 synthetic requests")
+
+    advanced=json.loads((ROOT/"reference/GovFriction_Advanced_CPU_Kaggle.ipynb").read_text())
+    independent_context={"__name__":"__main__","display":lambda obj:print(obj.to_string(index=False))}
+    for n,cell in enumerate(advanced["cells"],1):
+        if cell["cell_type"]=="code":
+            exec(compile("".join(cell["source"]),f"advanced-notebook:cell-{n}","exec"),independent_context)
+    for filename in ["advanced_cpu_kaggle_groups.csv","advanced_cpu_kaggle_monthly.csv",
+                     "advanced_cpu_kaggle_association.csv","advanced_cpu_kaggle_survival.csv",
+                     "advanced_cpu_kaggle_manifest.json"]:
+        assert Path(filename).is_file() and Path(filename).stat().st_size>0,filename
+    assert len(list(csv.DictReader(open("advanced_cpu_kaggle_groups.csv",newline="",encoding="utf-8"))))==10
+    print("PASS independent advanced CPU Kaggle notebook execution and exports")

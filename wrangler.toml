@@ -1,6 +1,23 @@
+# Real Cloudflare Worker + static website assets.
+# Add environment variables and secrets in Cloudflare Workers > Settings.
+# Keep API tokens OUT of GitHub. Use wrangler secret put NAME.
 name = "mabrig-govfriction-lab"
+main = "./src/index.mjs"
 compatibility_date = "2026-11-19"
 
 [assets]
 directory = "./web"
+binding = "ASSETS"
 not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[vars]
+APP_MODE = "research-pilot"
+ENABLE_SERVER_ANALYTICS = "true"
+MAX_AGGREGATE_GROUPS = "12"
+
+# Optional D1 binding: only uncomment after creating a database in Cloudflare.
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "mabrig-govfriction-db"
+# database_id = "REPLACE_WITH_ACTUAL_DATABASE_UUID"

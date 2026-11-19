@@ -25,3 +25,5 @@ jobs:
         run: python -m pip install --disable-pip-version-check pandas numpy scikit-learn
       - name: Execute independent predictive Kaggle notebook on synthetic requests
         run: python scripts/smoke_predictive_notebook.py
+      - name: Compile real Cloudflare Worker and asset bundle (no deployment)
+        run: npx --yes wrangler@4 deploy --dry-run --outdir /tmp/govfriction-worker-check

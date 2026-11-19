@@ -10,7 +10,7 @@
 <body>
 <header class="topbar">
 <a class="brand" href="#home"><span class="mark" aria-hidden="true">M</span><span><strong>MABRIG</strong><small>GOVFRICTION LAB</small></span></a>
-<nav aria-label="Main navigation"><a href="#data">Data</a><a href="#methods">Methods</a><a href="#results">Results</a><a href="#predict">Predict</a><a href="#compare">Validate</a></nav>
+<nav aria-label="Main navigation"><a href="#data">Data</a><a href="#methods">Methods</a><a href="#results">Results</a><a href="#cpu">CPU Lab</a><a href="#predict">Predict</a><a href="#compare">Validate</a></nav>
 <span class="version">BFS-DAI · RESEARCH PILOT</span>
 </header>
 <main id="home">
@@ -21,6 +21,7 @@
 <div class="hero-notes"><span>Works on mobile & desktop</span><span>No registration</span><span>Local CSV analysis</span><span>Independent Kaggle checks</span></div>
 </section>
 <div class="notice" role="note"><strong>Research boundary:</strong> This tool measures recorded request closure, not verified physical resolution or government efficiency. Its built-in demonstration is <strong>synthetic</strong>—never present demo numbers as NYC findings.</div>
+<div class="backendstatus" id="backendstatus" role="status" aria-live="polite">Checking Cloudflare Worker API…</div>
 <div class="workflow" aria-label="Research workflow"><span>1 · Import</span><span>2 · Audit</span><span>3 · Analyse</span><span>4 · Predict</span><span>5 · Validate & Export</span></div>
 <section class="step" id="data">
 <div class="stephead"><span class="stepnum">01</span><div><h2>Upload administrative data</h2><p>Bring a frozen CSV research dataset. Files stay in your browser tab.</p></div></div>
@@ -56,6 +57,33 @@
 <h3>Comparative profile</h3><div id="bars" class="bars"></div>
 <p class="sub">Higher scores reflect longer documented closure times and/or more disparity with other boroughs for the same service. Small groups are suppressed. Confidence intervals for the composite index are not yet available.</p>
 <div class="actions"><button type="button" id="reportjson" class="secondary">Download research record (.json)</button><button type="button" id="resultcsv" class="secondary">Download group table (.csv)</button></div>
+</section>
+<section class="step" id="cpu" hidden>
+<div class="stephead"><span class="stepnum">03B</span><div><h2>CPU Research Workbench</h2><p>Advanced descriptive analysis without blocking the browser interface.</p></div></div>
+<p class="sub">Work on the same audited dataset using a dedicated browser CPU thread. These analyses complement—rather than replace—the Kaggle notebook.</p>
+<button type="button" class="primary" id="runcpu">Run advanced CPU analysis</button>
+<p id="cpustatus" class="filemeta" role="status" aria-live="polite">Run the audited analysis first. Raw request records are processed locally.</p>
+<div id="cpuoutput" hidden>
+<div class="tabletitle"><h3>Group estimates and 95% Wilson intervals</h3><label>Service <select id="cpuservice"></select></label></div>
+<div class="tablewrap"><table><thead><tr><th>Borough</th><th>Requests</th><th>Nonclosed at horizon</th><th>Nonclosure rate</th><th>95% interval</th></tr></thead><tbody id="cpugroups"></tbody></table></div>
+<h3>Monthly observed nonclosure trends</h3>
+<div class="tablewrap"><table><thead><tr><th>Month</th><th>Service</th><th>Cases</th><th>Nonclosure rate</th><th>95% interval</th></tr></thead><tbody id="cputrends"></tbody></table></div>
+<h3>Kaplan–Meier time-to-recorded-closure</h3>
+<div id="cpusurvival" class="cpu-survival"></div>
+<p class="sub">Unclosed cases are censored at the study's follow-up horizon. A displayed survival probability is the estimated proportion not yet documented as closed.</p>
+<div class="actions"><button type="button" class="secondary" id="cpudownload">Download advanced CPU report (.json)</button></div>
+<h3>Independent Kaggle CPU comparison</h3>
+<p class="sub">Import advanced_cpu_kaggle_groups.csv from the independent Python notebook. The app checks the exact source SHA-256, matching group identifiers, rates and Wilson intervals before reporting agreement.</p>
+<label class="comparefile" for="cpucompare">Compare group results with Kaggle CSV<input type="file" id="cpucompare" accept=".csv,text/csv"></label>
+<div class="compareout" id="cpucompareout" role="status" aria-live="polite">Independent advanced CPU comparison not yet run.</div>
+<div class="serverpanel">
+<h3>Cloudflare Worker statistical API</h3>
+<p class="sub">Optional: calculate Pearson chi-square, Cramér's V and confidence intervals on Cloudflare. Only aggregated borough-level counts for the selected service will be sent—never IDs, dates, addresses or individual records. This request is not saved by the app.</p>
+<label class="consent"><input id="cpuconsent" type="checkbox"> I agree to send these aggregate counts to the Cloudflare Worker for this test</label>
+<button type="button" class="secondary" id="cpuserver" disabled>Analyse grouped counts on Cloudflare</button>
+<div class="compareout" id="cpuserverresult" role="status" aria-live="polite">Server analysis is optional and disabled until you consent.</div>
+</div>
+</div>
 </section>
 <section class="step" id="predict" hidden>
 <div class="stephead"><span class="stepnum">04</span><div><h2>Predict 30-day nonclosure</h2><p>Compare statistical prediction models on a later time period—not the training records.</p></div></div>
