@@ -36,6 +36,7 @@ try{
  await page.locator('#runcpu').click();
  await page.waitForFunction(()=>!document.querySelector('#cpuoutput').hidden,{timeout:30000});
  assert.ok((await page.locator('#cpugroups tr').count())>0);
+ await page.locator('#rlab details summary').click();
  await page.locator('#rnewname').fill('wait_plus_one');
  await page.locator('#rleft').selectOption('synthetic_wait_days');
  await page.locator('#rright').selectOption('__constant__');
