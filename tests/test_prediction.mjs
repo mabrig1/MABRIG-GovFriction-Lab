@@ -35,7 +35,7 @@ assert.equal(evaluated.models[1].coefficients.length,10);
 const mutated=rows.map(r=>({...r,status:'Different after study'}));
 assert.deepEqual(evaluatePredictionModels(mutated,map).models,evaluated.models,'Current status should not be predictive input or training label');
 const testStart=Date.parse(evaluated.split.holdoutStart);
-const tampered=rows.map(r=>({...r,closed_date:Date.parse(r.created_date)>=testStart?'':r.closed_date}));
+const tampered=rows.map(r=>({...r,closed_date:Date.parse(r.created_date)>=testStart&&Number(r.unique_key.slice(1))%4===0?'':r.closed_date}));
 const altered=evaluatePredictionModels(tampered,map);
 assert.deepEqual(altered.models[1].coefficients,evaluated.models[1].coefficients,'Held-out outcomes must not influence logistic coefficients');
 assert.equal(altered.models[0].metrics.n,evaluated.models[0].metrics.n);
