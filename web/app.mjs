@@ -1,5 +1,6 @@
 import {autoMap,parseCSV,analyze,exportCSV,compareReports,DEFAULTS} from './engine.mjs';
 import {evaluatePredictionModels} from './prediction.mjs';
+import {initResearchLabs} from './extra-labs.mjs';
 const $=id=>document.getElementById(id);
 let dataset=null,mapping=null,report=null,prediction=null,cpuResult=null,backendReady=false,sha=null,filename='';
 const required=['id','created','closed','agency','service','borough'];
@@ -32,6 +33,7 @@ async function loadCSV(text,name){
   select.addEventListener('change',()=>{mapping[key]=select.value});
   label.append(select);target.append(label);
  }
+ extraLabs.onDataChanged(dataset);
 }
 $('file').addEventListener('change',async event=>{
  const file=event.target.files&&event.target.files[0];if(!file)return;
@@ -63,6 +65,7 @@ $('analyze').addEventListener('click',()=>{
   const config={from:$('from').value,to:$('to').value,snapshot:$('snapshot').value,horizonDays:Number($('horizon').value),minN:Number($('minN').value),wFriction:Number($('weight').value)/100};
   report=analyze(dataset.data,mapping,config);prediction=null;cpuResult=null;
   report.source={filename,sha256:sha,parsedRows:dataset.data.length,malformedCSVRows:dataset.malformed,synthetic:filename.startsWith('SYNTHETIC')};
+  extraLabs.onOutputsChanged();
   showReport();$('results').hidden=false;$('cpu').hidden=false;$('cpuoutput').hidden=true;$('cpustatus').textContent='Ready to run CPU analysis locally. No records will be uploaded.';$('predict').hidden=false;$('predictresults').hidden=true;$('predictcomparison').textContent='Run prediction before importing independent model metrics.';$('predictmessage').textContent='Ready for leakage-safe temporal evaluation. The held-out test period is never used for training.';$('results').scrollIntoView({behavior:'smooth',block:'start'});
  }catch(error){alert('Analysis stopped: '+error.message)}
 });
@@ -305,6 +308,7 @@ $('runcpu').addEventListener('click',async()=>{
   if(cpuResult.audit.eligible!==report.counts.eligible)throw Error('Research CPU group audit differs from the BFS-DAI record count. Report withheld.');
   cpuResult.source={filename,sha256:sha,synthetic:report.source.synthetic};
   showCPU();
+  extraLabs.onOutputsChanged();
   $('cpustatus').textContent='Completed locally on '+int(cpuResult.eligible)+' eligible requests'+(report.source.synthetic?' · SYNTHETIC demonstration only.':'.');
  }catch(error){cpuResult=null;$('cpuoutput').hidden=true;$('cpustatus').textContent='CPU analysis stopped: '+error.message}
  finally{$('runcpu').disabled=false}
@@ -359,4 +363,17 @@ $('cpucompare').addEventListener('change',async event=>{
   $('cpucompareout').textContent=failures.length?'REVIEW NEEDED · '+failures.length+' disagreement(s):\n'+failures.join('\n')
     :'PASS: all '+cpuResult.groups.length+' groups match Kaggle counts, rates, confidence intervals and source SHA-256. Numerical agreement does not prove conceptual validity.';
  }catch(error){$('cpucompareout').textContent='Comparison stopped: '+error.message}
+});
+
+const extraLabs=initResearchLabs({
+ getOutputs:()=>({report,cpu:cpuResult,prediction}),
+ runJob:runBrowserJob,
+ onMutation:(change)=>{
+  report=null;prediction=null;cpuResult=null;sha=null;
+  for(const id of ['results','cpu','predict'])$(id).hidden=true;
+  $('compareout').textContent='Data transformed: import the exported revised CSV as a new frozen source before Kaggle validation.';
+  $('filemeta').textContent=filename+' · modified in browser with derived variable '+change.name+
+    ' · source checksum invalidated; download and re-import the modified CSV before independent comparison.';
+  extraLabs.onDataChanged(dataset);
+ }
 });
