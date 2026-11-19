@@ -26,3 +26,18 @@ summary{cursor:pointer;font-size:14px;font-weight:800;color:#285e4f}details .tab
 .survivalpanel>strong{display:block;font-size:13px;color:#1c5745;margin-bottom:10px}
 .survivalpanel th,.survivalpanel td{font-size:11px;padding:9px}
 @media(max-width:720px){.cpu-survival{grid-template-columns:1fr}}
+
+/* R Statistics, computational content analysis and visualization */
+.topbar nav{flex-wrap:wrap;justify-content:center;row-gap:8px}
+.topbar nav a{white-space:nowrap}
+.routput{background:#112c29;color:#e1f2e9;border:1px solid #2d5950;border-radius:11px;padding:16px;min-height:100px;max-height:460px;overflow:auto;white-space:pre-wrap;word-break:break-word;font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+.blocklabel{display:block;font-size:13px;font-weight:800;color:#42645e;margin:16px 0 8px}
+#textthemes{display:block;width:100%;border:1px solid #cadfd4;border-radius:10px;padding:12px;resize:vertical;min-height:95px;background:white;color:#12342b;font:13px/1.5 ui-monospace,Consolas,monospace}
+.vizcanvas{margin:17px 0;border:1px solid #d9e8e0;background:white;border-radius:14px;padding:8px;min-height:120px;overflow:auto}
+.vizcanvas svg{width:100%;max-height:520px}
+.rsettings{margin-top:20px}
+#rlab .actions,#vizlab .actions{margin:20px 0 14px}
+#rlab .settings,#vizlab .settings,#contentlab .settings{margin-top:15px}
+#rvars td:first-child{font-weight:700}
+@media(max-width:950px){.topbar{flex-wrap:wrap}.topbar nav{order:3;width:100%;justify-content:space-around}}
+@media(max-width:520px){.topbar nav{gap:9px}.topbar nav a{font-size:11px}#rlab .settings,#vizlab .settings,#contentlab .settings{grid-template-columns:1fr}}
