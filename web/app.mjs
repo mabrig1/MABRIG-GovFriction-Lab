@@ -44,7 +44,7 @@ $('file').addEventListener('change',async event=>{
 });
 $('weight').addEventListener('input',()=>{$('weightOut').textContent=$('weight').value+'%'});
 function syntheticCSV(){
- const rows=['unique_key,created_date,closed_date,agency,complaint_type,borough,status,public_summary'];
+ const rows=['unique_key,created_date,closed_date,agency,complaint_type,borough,status,public_summary,synthetic_wait_days,synthetic_priority_score'];
  let id=0;
  const regions=['BRONX','BROOKLYN','MANHATTAN','QUEENS','STATEN ISLAND'];
  const baselines={BRONX:5,BROOKLYN:8,MANHATTAN:2,QUEENS:15,'STATEN ISLAND':24};
@@ -54,7 +54,7 @@ function syntheticCSV(){
   const days=Math.max(0,baselines[region]+(service==='Graffiti'?6:0)+(k%7)*3-7);
   const closed=(k+id)%13===0?'':new Date(created.getTime()+(days*24+k%6)*3600000).toISOString().slice(0,19);
   const summaries=['Request reported with delayed response and no feedback','Collection service complaint with missed pickup','Graffiti report awaiting agency update','Public complaint resolved following acknowledgement'];
-  const values=['SYN-'+String(id).padStart(5,'0'),created.toISOString().slice(0,19),closed,'DSNY',service,region,closed?'Closed':'Open',summaries[(k+id)%summaries.length]];
+  const values=['SYN-'+String(id).padStart(5,'0'),created.toISOString().slice(0,19),closed,'DSNY',service,region,closed?'Closed':'Open',summaries[(k+id)%summaries.length],String(days),String((k%5)+1)];
   rows.push(values.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(','));
  }
  return rows.join('\n');
