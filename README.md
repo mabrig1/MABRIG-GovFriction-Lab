@@ -93,3 +93,14 @@ Read docs/METHODS.md for protocol details and limitations.
 - wrangler.toml — Cloudflare Workers static assets
 
 © 2026 MABRIG Technologies · Exploratory research software.
+## Predictive statistical modelling (v0.3 preview)
+
+The **Predict** section appears after a successful audited descriptive analysis. Select **Evaluate predictive models** to score *recorded nonclosure by the selected follow-up horizon* using three explicit methods: training-prevalence baseline, L2-regularized logistic regression and categorical Naive Bayes. Models run entirely in the user's browser and use only service category, borough and creation-time weekday/hour.
+
+The web app automatically separates earlier training data from later held-out requests, with a full follow-up horizon gap to ensure training outcomes were knowable at test time. If there are too few records or outcomes, it refuses to report model accuracy. Displayed metrics include accuracy, balanced accuracy, recall, precision, ROC-AUC, Brier score, log loss, confusion matrices in the JSON export and five probability-calibration buckets. It also exposes logistic odds ratios and study-window metadata.
+
+**Do not claim results are scientifically validated yet.** The synthetic demo is not an NYC prediction study. High accuracy from an imbalanced test set is insufficient; models must be evaluated against the baseline and later independent real data. Group-level coefficients are not causal findings. The pilot includes neither composite score confidence intervals nor external validation.
+
+For Kaggle, open `reference/GovFriction_Predictive_Kaggle.ipynb` and add the **exact same frozen CSV** as input. Run the notebook on CPU. It produces `prediction_kaggle_metrics.csv`, `prediction_kaggle_calibration.csv`, and `prediction_kaggle_manifest.json`. These reference estimators use scikit-learn, so small software-specific differences from the web app are expected. Verify dataset SHA, split dates, cohort audit, and interpretable metric differences; no identical numeric prediction claim is made.
+
+The full research protocol, split definition, prohibited features and additional validation requirements are documented in [docs/PREDICTION_PROTOCOL.md](docs/PREDICTION_PROTOCOL.md).

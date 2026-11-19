@@ -21,3 +21,7 @@ jobs:
         run: npm run build
       - name: Check Python data downloader syntax
         run: python -m py_compile reference/fetch_nyc311.py
+      - name: Install statistical reference dependencies
+        run: python -m pip install --disable-pip-version-check pandas numpy scikit-learn
+      - name: Execute independent predictive Kaggle notebook on synthetic requests
+        run: python scripts/smoke_predictive_notebook.py

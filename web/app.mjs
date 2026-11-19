@@ -1,6 +1,7 @@
 import {autoMap,parseCSV,analyze,exportCSV,compareReports,DEFAULTS} from './engine.mjs';
+import {evaluatePredictionModels} from './prediction.mjs';
 const $=id=>document.getElementById(id);
-let dataset=null,mapping=null,report=null,sha=null,filename='';
+let dataset=null,mapping=null,report=null,prediction=null,sha=null,filename='';
 const required=['id','created','closed','agency','service','borough'];
 const titles={id:'Request ID',created:'Creation timestamp',closed:'Closure timestamp',agency:'Agency',service:'Service / problem',borough:'Borough',status:'Recorded status (optional)'};
 const int=n=>Number.isFinite(n)?n.toLocaleString('en-US'):'—';
@@ -15,8 +16,8 @@ async function hashText(text){
 }
 async function loadCSV(text,name){
  const parsed=parseCSV(text);
- dataset=parsed;mapping=autoMap(parsed.headers);filename=name;sha=await hashText(text);report=null;
- $('results').hidden=true;$('analyze').disabled=false;$('mapping').hidden=false;
+ dataset=parsed;mapping=autoMap(parsed.headers);filename=name;sha=await hashText(text);report=null;prediction=null;
+ $('results').hidden=true;$('predict').hidden=true;$('predictresults').hidden=true;$('predictcomparison').textContent='No independent prediction report uploaded.';$('analyze').disabled=false;$('mapping').hidden=false;
  $('filemeta').textContent=name+' · '+int(parsed.data.length)+' parsed rows · '+int(parsed.malformed)+' malformed CSV rows · SHA-256: '+(sha||'Unavailable. Serve the page via HTTPS or localhost.');
  $('compareout').textContent='Run analysis first, then select the independent Kaggle results file.';
  const target=$('mapgrid');target.replaceChildren();
@@ -60,9 +61,9 @@ $('analyze').addEventListener('click',()=>{
  if(!dataset)return;
  try{
   const config={from:$('from').value,to:$('to').value,snapshot:$('snapshot').value,horizonDays:Number($('horizon').value),minN:Number($('minN').value),wFriction:Number($('weight').value)/100};
-  report=analyze(dataset.data,mapping,config);
+  report=analyze(dataset.data,mapping,config);prediction=null;
   report.source={filename,sha256:sha,parsedRows:dataset.data.length,malformedCSVRows:dataset.malformed,synthetic:filename.startsWith('SYNTHETIC')};
-  showReport();$('results').hidden=false;$('results').scrollIntoView({behavior:'smooth',block:'start'});
+  showReport();$('results').hidden=false;$('predict').hidden=false;$('predictresults').hidden=true;$('predictcomparison').textContent='Run prediction before importing independent model metrics.';$('predictmessage').textContent='Ready for leakage-safe temporal evaluation. The held-out test period is never used for training.';$('results').scrollIntoView({behavior:'smooth',block:'start'});
  }catch(error){alert('Analysis stopped: '+error.message)}
 });
 function showReport(){
@@ -132,4 +133,80 @@ $('comparefile').addEventListener('change',async event=>{
   $('compareout').textContent=(comparison.ok?'PASS':'REVIEW NEEDED')+' — '+comparison.reason+
    (comparison.rows.length?'\n'+comparison.rows.map(g=>g.service+' / '+g.borough+': '+g.result).join('\n'):'');
  }catch(error){$('compareout').textContent='Comparison stopped: '+error.message}
+});
+
+function showPrediction(){
+ const models=prediction.models,split=prediction.split;
+ $('predictwindow').textContent='Training: '+split.trainStart+' to '+split.trainEndExclusive+' (exclusive) · Excluded follow-up gap until '+split.holdoutStart+' · Testing: '+split.holdoutStart+' to '+split.holdoutEndExclusive+' (exclusive) · Training cases: '+int(split.trainingN)+' · Test cases: '+int(split.holdoutN)+' · Test nonclosure rate: '+pct(split.holdoutEventRate)+'.';
+ const table=$('predictmetrics');table.replaceChildren();
+ for(const model of models){
+  const m=model.metrics,tr=make('tr');
+  for(const field of [model.name,pct(m.accuracy),pct(m.balancedAccuracy),pct(m.recall),pct(m.precision),dec(m.rocAuc),m.brier.toFixed(4),m.logLoss.toFixed(4)])tr.append(make('td','',field));
+  table.append(tr);
+ }
+ const calibration=$('predictcalibration');calibration.replaceChildren();
+ for(const model of models){
+  const block=make('div','calibrationcard');block.append(make('strong','',model.name));
+  for(const row of model.metrics.calibration){
+   const item=make('div','calibrationline');
+   const label=make('span','',(row.lower*100).toFixed(0)+'–'+(row.upper*100).toFixed(0)+'% · '+int(row.n)+' requests');
+   const summary=make('span','',row.n?'Forecast '+pct(row.probability)+' / observed '+pct(row.observed):'No test cases in this interval');
+   item.append(label,summary);block.append(item);
+  }
+  calibration.append(block);
+ }
+ const coef=$('predictcoefs');coef.replaceChildren();
+ for(const row of (models.find(m=>m.coefficients)?.coefficients||[])){
+  const tr=make('tr');tr.append(make('td','',row.name),make('td','',dec(row.beta)),make('td','',dec(row.oddsRatio)));coef.append(tr);
+ }
+ $('predictresults').hidden=false;
+}
+$('runprediction').addEventListener('click',()=>{
+ if(!dataset||!report){$('predictmessage').textContent='First import a dataset and complete the audited analysis.';return}
+ $('runprediction').disabled=true;$('predictmessage').textContent='Fitting and testing statistical models locally…';
+ try{
+  prediction=evaluatePredictionModels(dataset.data,mapping,report.config);
+  if(prediction.audit.eligible!==report.counts.eligible)throw Error('Predictive audit differs from descriptive audit; the evaluation has been stopped.');
+  prediction.source={filename:report.source.filename,sha256:report.source.sha256,synthetic:report.source.synthetic};
+  showPrediction();
+  $('predictmessage').textContent=(report.source.synthetic?'SYNTHETIC training example only. ':'User-uploaded data; verify provenance. ')+'Three models evaluated on a strictly later time window.';
+ }catch(error){
+  prediction=null;$('predictresults').hidden=true;
+  $('predictmessage').textContent='Evaluation withheld: '+error.message;
+ }finally{$('runprediction').disabled=false}
+});
+$('downloadprediction').addEventListener('click',()=>{
+ if(prediction)download(JSON.stringify(prediction,null,2),'govfriction-prediction-evaluation.json','application/json');
+});
+
+
+$('predictreference').addEventListener('change',async event=>{
+ if(!prediction||!sha){$('predictcomparison').textContent='Run the app prediction on the same frozen source CSV first.';return}
+ const file=event.target.files?.[0];if(!file)return;
+ try{
+  if(file.size>5*1024*1024)throw Error('Prediction reference file exceeds 5 MB.');
+  const reference=parseCSV(await file.text()).data;
+  if(reference.length!==prediction.models.length)throw Error('Expected exactly three independent model rows.');
+  const names=new Set(),lines=['Independent prediction evaluation (same dataset and time window):'];
+  for(const row of reference){
+   if(!row.source_sha256||row.source_sha256.toLowerCase()!==sha.toLowerCase())throw Error('Dataset SHA-256 mismatch: comparison refused.');
+   if(row.train_end_exclusive!==prediction.split.trainEndExclusive||
+      row.holdout_start!==prediction.split.holdoutStart||
+      Number(row.training_n)!==prediction.split.trainingN||
+      Number(row.holdout_n)!==prediction.split.holdoutN)throw Error('Training/holdout split or row counts disagree: comparison refused.');
+   if(names.has(row.model))throw Error('Duplicate independent model name: '+row.model);
+   names.add(row.model);
+   const own=prediction.models.find(m=>m.name===row.model);
+   if(!own)throw Error('Unrecognised independent model: '+row.model);
+   const diffs=[];
+   for(const field of [['accuracy','accuracy'],['roc_auc','rocAuc'],['brier','brier'],['log_loss','logLoss']]){
+    const ref=Number(row[field[0]]),local=own.metrics[field[1]];
+    if(!Number.isFinite(ref)||!Number.isFinite(local))throw Error('Invalid independent performance value: '+field[0]);
+    diffs.push(field[0]+': app '+local.toFixed(4)+', Kaggle '+ref.toFixed(4)+', difference '+Math.abs(local-ref).toFixed(4));
+   }
+   lines.push('\n'+row.model+'\n  '+diffs.join('\n  '));
+  }
+  lines.push('\nCheck any differences against estimation method, priors and numerical convergence. Similar metrics support reproducibility; they do not establish substantive validity.');
+  $('predictcomparison').textContent=lines.join('\n');
+ }catch(error){$('predictcomparison').textContent='Independent prediction comparison withheld: '+error.message}
 });
