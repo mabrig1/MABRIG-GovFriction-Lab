@@ -63,7 +63,8 @@ export function initResearchLabs({getOutputs,onMutation,runJob}){
    const optional=id==='ry'||id==='rgroup';options($(id),cols,optional);
   }
   const constant=node('option','Numeric constant');constant.value='__constant__';$('rright').prepend(constant);
-  if(cols.includes('resolution_description'))$('textcolumn').value='resolution_description';
+  if(cols.includes('public_summary'))$('textcolumn').value='public_summary';
+  else if(cols.includes('resolution_description'))$('textcolumn').value='resolution_description';
   else if(cols.includes('descriptor'))$('textcolumn').value='descriptor';
   $('rsummary').textContent=dataset.data.length.toLocaleString()+' records · '+cols.length+' variables';
  }
