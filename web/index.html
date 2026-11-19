@@ -72,6 +72,10 @@
 <div id="cpusurvival" class="cpu-survival"></div>
 <p class="sub">Unclosed cases are censored at the study's follow-up horizon. A displayed survival probability is the estimated proportion not yet documented as closed.</p>
 <div class="actions"><button type="button" class="secondary" id="cpudownload">Download advanced CPU report (.json)</button></div>
+<h3>Independent Kaggle CPU comparison</h3>
+<p class="sub">Import advanced_cpu_kaggle_groups.csv from the independent Python notebook. The app checks the exact source SHA-256, matching group identifiers, rates and Wilson intervals before reporting agreement.</p>
+<label class="comparefile" for="cpucompare">Compare group results with Kaggle CSV<input type="file" id="cpucompare" accept=".csv,text/csv"></label>
+<div class="compareout" id="cpucompareout" role="status" aria-live="polite">Independent advanced CPU comparison not yet run.</div>
 <div class="serverpanel">
 <h3>Cloudflare Worker statistical API</h3>
 <p class="sub">Optional: calculate Pearson chi-square, Cramér's V and confidence intervals on Cloudflare. Only aggregated borough-level counts for the selected service will be sent—never IDs, dates, addresses or individual records. This request is not saved by the app.</p>
