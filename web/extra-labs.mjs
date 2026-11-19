@@ -63,6 +63,9 @@ export function initResearchLabs({getOutputs,onMutation,runJob}){
    const optional=id==='ry'||id==='rgroup';options($(id),cols,optional);
   }
   const constant=node('option','Numeric constant');constant.value='__constant__';$('rright').prepend(constant);
+  const numericColumns=dictionary.filter(d=>d.kind==='numeric').map(d=>d.name);
+  if(numericColumns.length){$('rx').value=numericColumns[0];$('ry').value=numericColumns[1]||numericColumns[0]}
+  if(cols.includes('complaint_type'))$('rgroup').value='complaint_type';
   if(cols.includes('public_summary'))$('textcolumn').value='public_summary';
   else if(cols.includes('resolution_description'))$('textcolumn').value='resolution_description';
   else if(cols.includes('descriptor'))$('textcolumn').value='descriptor';
