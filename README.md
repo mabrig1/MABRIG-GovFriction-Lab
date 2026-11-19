@@ -51,22 +51,38 @@ Do NOT use a truncated sample for full-cohort scientific claims. Source: https:/
 
 The browser engine does not import the notebook's Python calculations. The validation checks input hashes, group coverage and numerical tolerances. Matching outputs are implementation consistency, NOT proof of construct validity.
 
-## Deploy to Cloudflare Workers
+## Deploy to Cloudflare Workers with editable variables
 
-The repository includes wrangler.toml configured for static assets in the web/ directory. No D1 database or Worker secret is required.
+**This is an actual Cloudflare Worker with JavaScript server runtime**, not static-only hosting. The website remains bundled as static assets. The server script is at src/index.mjs; API requests run the Worker first. Public endpoints: GET /api/health and GET /api/config; bounded server computing endpoint: POST /api/analysis/contingency.
 
-In Cloudflare Dashboard: Workers & Pages → Create application → import this GitHub repository (mabrig1/MABRIG-GovFriction-Lab) → select the main branch. Set Worker name to **mabrig-govfriction-lab** to match wrangler.toml. Configure:
+Cloudflare configuration (wrangler.toml):
 
-- Build command: npm run build
-- Deploy command: npx wrangler deploy
-- Root directory: repository root
-- Output assets: handled by wrangler.toml at ./web
+    name = "mabrig-govfriction-lab"
+    main = "./src/index.mjs"
+    compatibility_date = "2026-11-19"
 
-Alternatively, from an authenticated local terminal run:
+    [assets]
+    directory = "./web"
+    binding = "ASSETS"
+    not_found_handling = "single-page-application"
+    run_worker_first = ["/api/*"]
 
-    npx wrangler deploy
+    [vars]
+    APP_MODE = "research-pilot"
+    ENABLE_SERVER_ANALYTICS = "true"
+    MAX_AGGREGATE_GROUPS = "12"
 
-Before deploying, verify the Cloudflare account and existing Worker name; avoid accidentally replacing another project. Pushing to GitHub does not itself guarantee a live Cloudflare site.
+**Deployment:** In Cloudflare Dashboard, confirm this GitHub repo is connected to the existing Worker named mabrig-govfriction-lab. Keep build command npm run build and deploy command npx wrangler deploy at the repo root. Alternatively, authenticate Wrangler to the intended Cloudflare account and run npx wrangler deploy. Do not inadvertently create a second Worker. Verify that https://govfriction.mabrigkorie.org/api/health returns JSON identifying cloudflare-worker before calling the update live.
+
+**Add variables:** Cloudflare Dashboard → Workers & Pages → mabrig-govfriction-lab → Settings → Variables and Secrets. Add the nonsecret variables above or manage them in wrangler.toml; if changing dashboard values also reconcile Wrangler configuration to prevent a future Git deployment overwriting them. Encrypted secrets for *future* integrations may include OPENROUTER_API_KEY and ADMIN_TOKEN; neither is used by this MVP. Add secrets in the dashboard or using npx wrangler secret put OPENROUTER_API_KEY. Never check secret values into Git or echo them through an API response.
+
+**Optional database:** D1 binding DB is not required for this version. If a database is created in Cloudflare, use its real UUID and name in the Wrangler database binding and redeploy. The current project never writes user records to D1 simply because the DB binding exists.
+
+**CPU limitations:** Workers Free currently has a 10 ms CPU budget per request. The server therefore accepts up to 16 KiB of *aggregate group counts only*, computing chi-square, Cramér V and risk differences. Larger audits, trends, survival and classification are processed in a browser CPU Worker. This is not a Python/Jupyter Kaggle instance.
+
+**Data privacy:** Individual request records are never uploaded to the Worker API. For the optional Cloudflare statistical test, the user must first explicitly consent to send group counts for a selected service; no request body is stored by the app. Aggregated cells can still disclose sensitive patterns, so assess data sharing permissions before opting in.
+
+See docs/CLOUDFLARE_WORKER.md for verification and security boundaries.
 
 ## Research boundaries
 
@@ -104,3 +120,9 @@ The web app automatically separates earlier training data from later held-out re
 For Kaggle, open `reference/GovFriction_Predictive_Kaggle.ipynb` and add the **exact same frozen CSV** as input. Run the notebook on CPU. It produces `prediction_kaggle_metrics.csv`, `prediction_kaggle_calibration.csv`, and `prediction_kaggle_manifest.json`. These reference estimators use scikit-learn, so small software-specific differences from the web app are expected. Verify dataset SHA, split dates, cohort audit, and interpretable metric differences; no identical numeric prediction claim is made.
 
 The full research protocol, split definition, prohibited features and additional validation requirements are documented in [docs/PREDICTION_PROTOCOL.md](docs/PREDICTION_PROTOCOL.md).
+
+## CPU Research Workbench v0.4
+
+After the BFS-DAI audit, open CPU Lab and run advanced CPU analysis. A dedicated browser CPU thread calculates borough nonclosure rates, Wilson confidence intervals, monthly trends and Kaplan–Meier time-to-recorded-closure summaries. Download the derived results as JSON. With explicit consent, send aggregated counts for a lightweight Cloudflare Worker chi-square association test; no individual records are sent.
+
+These methods are not yet a general-purpose SPSS/Python environment or evidence of predictive accuracy equivalent to Kaggle. Longer source windows and independent notebook checks remain research requirements.
