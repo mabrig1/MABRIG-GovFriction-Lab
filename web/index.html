@@ -71,6 +71,10 @@
 <div id="predictcalibration" class="calibrationgrid"></div>
 <details><summary>Explore logistic regression coefficients (odds ratios)</summary><div class="tablewrap"><table><thead><tr><th>Predictor</th><th>Coefficient</th><th>Odds ratio</th></tr></thead><tbody id="predictcoefs"></tbody></table></div><p class="sub">Coefficients are conditional associations, not causal effects; sample uncertainty is not estimated in this pilot.</p></details>
 <div class="actions"><button type="button" id="downloadprediction" class="secondary">Download prediction evaluation (.json)</button></div>
+<h3>Compare with independently calculated Kaggle statistics</h3>
+<p class="sub">Use prediction_kaggle_metrics.csv from the independent notebook, generated from the exact same CSV. The app verifies the dataset checksum, sample sizes and test window before displaying differences. Equivalent methods may still produce slightly different estimates.</p>
+<label class="comparefile" for="predictreference">Import Kaggle prediction metrics CSV<input id="predictreference" type="file" accept=".csv,text/csv"></label>
+<div class="compareout" id="predictcomparison" aria-live="polite">No independent prediction report uploaded.</div>
 </div>
 </section>
 <section class="step" id="compare">
