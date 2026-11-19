@@ -161,11 +161,11 @@ function showPrediction(){
  }
  $('predictresults').hidden=false;
 }
-$('runprediction').addEventListener('click',()=>{
+$('runprediction').addEventListener('click',async()=>{
  if(!dataset||!report){$('predictmessage').textContent='First import a dataset and complete the audited analysis.';return}
  $('runprediction').disabled=true;$('predictmessage').textContent='Fitting and testing statistical models locally…';
  try{
-  prediction=evaluatePredictionModels(dataset.data,mapping,report.config);
+  prediction=await runBrowserJob('prediction',dataset.data,mapping,report.config);
   if(prediction.audit.eligible!==report.counts.eligible)throw Error('Predictive audit differs from descriptive audit; the evaluation has been stopped.');
   prediction.source={filename:report.source.filename,sha256:report.source.sha256,synthetic:report.source.synthetic};
   showPrediction();
