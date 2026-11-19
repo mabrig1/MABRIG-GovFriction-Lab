@@ -126,3 +126,19 @@ The full research protocol, split definition, prohibited features and additional
 After the BFS-DAI audit, open CPU Lab and run advanced CPU analysis. A dedicated browser CPU thread calculates borough nonclosure rates, Wilson confidence intervals, monthly trends and Kaplan–Meier time-to-recorded-closure summaries. Download the derived results as JSON. With explicit consent, send aggregated counts for a lightweight Cloudflare Worker chi-square association test; no individual records are sent.
 
 These methods are not yet a general-purpose SPSS/Python environment or evidence of predictive accuracy equivalent to Kaggle. Longer source windows and independent notebook checks remain research requirements.
+
+## R Statistics + Content Analysis + Visualization Engine (v0.5)
+
+The homepage has three new research workspaces that share the existing CSV dataset:
+
+- **R Stats:** detect numeric and categorical columns, inspect missingness, add derived numeric variables, and perform base-R descriptive statistics, Pearson/Spearman correlations, Welch t-tests, ANOVA, ordinary least squares regression, and chi-square association tests. Actual R runs in the browser using optional [webR](https://docs.r-wasm.org/webr/latest/), downloaded on first use. Export the complete generated R script to reproduce the test on desktop R. In-browser pilot limit: 10,000 rows.
+- **Content Analysis:** select any text column from the CSV; calculate corpus size, token counts, unigrams, bigrams, TF-IDF, and dictionary-coded themes with explicit keyword/phrase rules. The example dataset includes a synthetic public_summary text column. This is transparent lexical coding, not LLM topic inference. Save an aggregate JSON report without original text. Pilot limit: 3,000 documents and 1.8 million characters.
+- **Charts:** select uploaded data, content term frequencies, CPU monthly trends, or BFS-DAI group scores. Create bar, line, scatter or histogram charts using selectable X and Y variables; export SVG and plotted data CSV. Visuals are local and do not require an image API.
+
+**Data integrity:** Adding a variable changes the in-memory dataset and invalidates the original source SHA-256 and existing study results. Download the revised dataset and re-import it as a new frozen source before benchmarking with Kaggle/R. R scripts embed selected source values and should be stored securely.
+
+**Cloudflare architecture:** The project remains an actual Worker (src/index.mjs) with environment variables and ASSETS binding. Browser-side webR and text visualization do not require server-side R installation or additional Cloudflare secrets. webR's runtime is loaded from a pinned external origin at user request; a production hardening option is self-hosting vetted runtime assets.
+
+**Validation:** JS analytical tests and browser smoke checks cover exports and UI. The R runtime's first-load execution still requires a browser acceptance check on the final Cloudflare deployment. Independent reproduction on authentic frozen data is required for scientific publication.
+
+Read [the R, computational content and visualization protocol](docs/R_CONTENT_VISUALIZATION.md) for statistical assumptions and methodology.

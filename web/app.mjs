@@ -1,5 +1,6 @@
 import {autoMap,parseCSV,analyze,exportCSV,compareReports,DEFAULTS} from './engine.mjs';
 import {evaluatePredictionModels} from './prediction.mjs';
+import {initResearchLabs} from './extra-labs.mjs';
 const $=id=>document.getElementById(id);
 let dataset=null,mapping=null,report=null,prediction=null,cpuResult=null,backendReady=false,sha=null,filename='';
 const required=['id','created','closed','agency','service','borough'];
@@ -32,6 +33,7 @@ async function loadCSV(text,name){
   select.addEventListener('change',()=>{mapping[key]=select.value});
   label.append(select);target.append(label);
  }
+ extraLabs.onDataChanged(dataset);
 }
 $('file').addEventListener('change',async event=>{
  const file=event.target.files&&event.target.files[0];if(!file)return;
@@ -42,7 +44,7 @@ $('file').addEventListener('change',async event=>{
 });
 $('weight').addEventListener('input',()=>{$('weightOut').textContent=$('weight').value+'%'});
 function syntheticCSV(){
- const rows=['unique_key,created_date,closed_date,agency,complaint_type,borough,status'];
+ const rows=['unique_key,created_date,closed_date,agency,complaint_type,borough,status,public_summary,synthetic_wait_days,synthetic_priority_score'];
  let id=0;
  const regions=['BRONX','BROOKLYN','MANHATTAN','QUEENS','STATEN ISLAND'];
  const baselines={BRONX:5,BROOKLYN:8,MANHATTAN:2,QUEENS:15,'STATEN ISLAND':24};
@@ -51,7 +53,8 @@ function syntheticCSV(){
   const created=new Date(Date.UTC(2025,0,2+(k*3+id)%80,id%12));
   const days=Math.max(0,baselines[region]+(service==='Graffiti'?6:0)+(k%7)*3-7);
   const closed=(k+id)%13===0?'':new Date(created.getTime()+(days*24+k%6)*3600000).toISOString().slice(0,19);
-  const values=['SYN-'+String(id).padStart(5,'0'),created.toISOString().slice(0,19),closed,'DSNY',service,region,closed?'Closed':'Open'];
+  const summaries=['Request reported with delayed response and no feedback','Collection service complaint with missed pickup','Graffiti report awaiting agency update','Public complaint resolved following acknowledgement'];
+  const values=['SYN-'+String(id).padStart(5,'0'),created.toISOString().slice(0,19),closed,'DSNY',service,region,closed?'Closed':'Open',summaries[(k+id)%summaries.length],String(days),String((k%5)+1)];
   rows.push(values.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(','));
  }
  return rows.join('\n');
@@ -63,6 +66,7 @@ $('analyze').addEventListener('click',()=>{
   const config={from:$('from').value,to:$('to').value,snapshot:$('snapshot').value,horizonDays:Number($('horizon').value),minN:Number($('minN').value),wFriction:Number($('weight').value)/100};
   report=analyze(dataset.data,mapping,config);prediction=null;cpuResult=null;
   report.source={filename,sha256:sha,parsedRows:dataset.data.length,malformedCSVRows:dataset.malformed,synthetic:filename.startsWith('SYNTHETIC')};
+  extraLabs.onOutputsChanged();
   showReport();$('results').hidden=false;$('cpu').hidden=false;$('cpuoutput').hidden=true;$('cpustatus').textContent='Ready to run CPU analysis locally. No records will be uploaded.';$('predict').hidden=false;$('predictresults').hidden=true;$('predictcomparison').textContent='Run prediction before importing independent model metrics.';$('predictmessage').textContent='Ready for leakage-safe temporal evaluation. The held-out test period is never used for training.';$('results').scrollIntoView({behavior:'smooth',block:'start'});
  }catch(error){alert('Analysis stopped: '+error.message)}
 });
@@ -305,6 +309,7 @@ $('runcpu').addEventListener('click',async()=>{
   if(cpuResult.audit.eligible!==report.counts.eligible)throw Error('Research CPU group audit differs from the BFS-DAI record count. Report withheld.');
   cpuResult.source={filename,sha256:sha,synthetic:report.source.synthetic};
   showCPU();
+  extraLabs.onOutputsChanged();
   $('cpustatus').textContent='Completed locally on '+int(cpuResult.eligible)+' eligible requests'+(report.source.synthetic?' · SYNTHETIC demonstration only.':'.');
  }catch(error){cpuResult=null;$('cpuoutput').hidden=true;$('cpustatus').textContent='CPU analysis stopped: '+error.message}
  finally{$('runcpu').disabled=false}
@@ -359,4 +364,17 @@ $('cpucompare').addEventListener('change',async event=>{
   $('cpucompareout').textContent=failures.length?'REVIEW NEEDED · '+failures.length+' disagreement(s):\n'+failures.join('\n')
     :'PASS: all '+cpuResult.groups.length+' groups match Kaggle counts, rates, confidence intervals and source SHA-256. Numerical agreement does not prove conceptual validity.';
  }catch(error){$('cpucompareout').textContent='Comparison stopped: '+error.message}
+});
+
+const extraLabs=initResearchLabs({
+ getOutputs:()=>({report,cpu:cpuResult,prediction}),
+ runJob:runBrowserJob,
+ onMutation:(change)=>{
+  report=null;prediction=null;cpuResult=null;sha=null;
+  for(const id of ['results','cpu','predict'])$(id).hidden=true;
+  $('compareout').textContent='Data transformed: import the exported revised CSV as a new frozen source before Kaggle validation.';
+  $('filemeta').textContent=filename+' · modified in browser with derived variable '+change.name+
+    ' · source checksum invalidated; download and re-import the modified CSV before independent comparison.';
+  extraLabs.onDataChanged(dataset);
+ }
 });
