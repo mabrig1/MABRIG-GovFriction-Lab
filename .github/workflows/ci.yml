@@ -27,3 +27,11 @@ jobs:
         run: python scripts/smoke_predictive_notebook.py
       - name: Compile real Cloudflare Worker and asset bundle (no deployment)
         run: npx --yes wrangler@4 deploy --dry-run --outdir /tmp/govfriction-worker-check
+      - name: Install browser smoke dependencies
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Smoke-test full research web workflow
+        run: |
+          python -m http.server 8788 --bind 127.0.0.1 > /tmp/govfriction-http.log 2>&1 &
+          node scripts/browser_smoke.mjs
