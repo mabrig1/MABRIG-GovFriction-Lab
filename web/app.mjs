@@ -50,7 +50,7 @@ function syntheticCSV(){
  const baselines={BRONX:5,BROOKLYN:8,MANHATTAN:2,QUEENS:15,'STATEN ISLAND':24};
  for(const service of DEFAULTS.services)for(const region of regions)for(let k=0;k<24;k++){
   id++;
-  const created=new Date(Date.UTC(2025,0,2+(k*3+id)%80,id%12));
+  const created=new Date(Date.UTC(2025,0,2+(k*3+id+regions.indexOf(region)+(service==='Graffiti'?2:0))%80,id%12));
   const days=Math.max(0,baselines[region]+(service==='Graffiti'?6:0)+(k%7)*3-7);
   const closed=(k+id)%13===0?'':new Date(created.getTime()+(days*24+k%6)*3600000).toISOString().slice(0,19);
   const summaries=['Request reported with delayed response and no feedback','Collection service complaint with missed pickup','Graffiti report awaiting agency update','Public complaint resolved following acknowledgement'];
@@ -147,6 +147,22 @@ function showPrediction(){
   const m=model.metrics,tr=make('tr');
   for(const field of [model.name,pct(m.accuracy),pct(m.balancedAccuracy),pct(m.recall),pct(m.precision),dec(m.rocAuc),m.brier.toFixed(4),m.logLoss.toFixed(4)])tr.append(make('td','',field));
   table.append(tr);
+ }
+ const uncertainty=prediction.uncertainty;
+ const intervals=$('predictuncertainty');intervals.replaceChildren();
+ $('predictuncertaintywrap').hidden=uncertainty.status!=='estimated';
+ $('predictuncertaintynote').textContent=uncertainty.status==='estimated'
+  ?'Exploratory paired day-cluster bootstrap: '+int(uncertainty.n)+' held-out requests across '+int(uncertainty.distinctDays)+' creation days, '+int(uncertainty.replications)+' fixed-seed resamples. These are NOT independent external validation.'
+  :('Uncertainty estimate withheld: '+uncertainty.reason);
+ if(uncertainty.status==='estimated'){
+  const interval=v=>'['+v.lower.toFixed(4)+', '+v.upper.toFixed(4)+']';
+  for(const model of uncertainty.estimates){
+   const tr=make('tr');
+   for(const value of [model.name,model.brier.toFixed(4),interval(model.brier95),
+     model.brierImprovementVsBaseline.toFixed(4),interval(model.improvement95)])
+      tr.append(make('td','',value));
+   intervals.append(tr);
+  }
  }
  const calibration=$('predictcalibration');calibration.replaceChildren();
  for(const model of models){

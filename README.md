@@ -142,3 +142,15 @@ The homepage has three new research workspaces that share the existing CSV datas
 **Validation:** JS analytical tests and browser smoke checks cover exports and UI. The R runtime's first-load execution still requires a browser acceptance check on the final Cloudflare deployment. Independent reproduction on authentic frozen data is required for scientific publication.
 
 Read [the R, computational content and visualization protocol](docs/R_CONTENT_VISUALIZATION.md) for statistical assumptions and methodology.
+
+## New: uncertainty around held-out prediction accuracy (development preview)
+
+The Predict panel now reports **exploratory 95% percentile intervals for held-out Brier error** and paired **Brier improvement versus the training-prevalence baseline**. This helps distinguish a lower point estimate from a more reliable result. It does not claim statistical significance or certified predictive accuracy.
+
+- Samples complete held-out UTC creation-day clusters, preserving within-day grouping; never retrains or tunes a model on test outcomes.
+- Uses 499 deterministic resamples (seed 20261120), with the same sampled days for all three models.
+- Requires at least 8 distinct held-out days; otherwise the interval is withheld with an explanation.
+- Reports confidence-like ranges **conditional on the frozen model**; intervals do not account for cross-day temporal dependence, training-stage variance, fairness or distribution shift. Do not infer causality or external validity.
+- Runs locally in the browser CPU worker, without sending case records to a server, and adds only aggregate interval fields to exported JSON. It does not export per-case probability predictions.
+
+See [docs/PREDICTION_UNCERTAINTY.md](docs/PREDICTION_UNCERTAINTY.md). Independent Kaggle replication of the intervals remains a separate validation requirement.
