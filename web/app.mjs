@@ -50,7 +50,7 @@ function syntheticCSV(){
  const baselines={BRONX:5,BROOKLYN:8,MANHATTAN:2,QUEENS:15,'STATEN ISLAND':24};
  for(const service of DEFAULTS.services)for(const region of regions)for(let k=0;k<24;k++){
   id++;
-  const created=new Date(Date.UTC(2025,0,2+(k*3+id)%80,id%12));
+  const created=new Date(Date.UTC(2025,0,2+(k*3+id+regions.indexOf(region)+(service==='Graffiti'?2:0))%80,id%12));
   const days=Math.max(0,baselines[region]+(service==='Graffiti'?6:0)+(k%7)*3-7);
   const closed=(k+id)%13===0?'':new Date(created.getTime()+(days*24+k%6)*3600000).toISOString().slice(0,19);
   const summaries=['Request reported with delayed response and no feedback','Collection service complaint with missed pickup','Graffiti report awaiting agency update','Public complaint resolved following acknowledgement'];
