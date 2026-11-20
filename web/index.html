@@ -158,6 +158,12 @@ Communication: no response, feedback, unanswered"></textarea>
 <p class="sub" id="predictwindow"></p>
 <div class="tablewrap"><table><thead><tr><th>Model</th><th>Accuracy</th><th>Balanced accuracy</th><th>Recall</th><th>Precision</th><th>ROC-AUC</th><th>Brier ↓</th><th>Log loss ↓</th></tr></thead><tbody id="predictmetrics"></tbody></table></div>
 <p class="sub">Higher ROC-AUC is better; lower Brier score and log loss are better. Accuracy is reported at a fixed threshold of 50%. Baseline comparison is essential. Results are exploratory, not certified predictive performance.</p>
+<h3>Uncertainty in prediction error versus the baseline</h3>
+<p class="sub" id="predictuncertaintynote" role="status" aria-live="polite"></p>
+<div class="tablewrap" id="predictuncertaintywrap" hidden>
+<table><thead><tr><th>Model</th><th>Brier error</th><th>Brier 95% interval</th><th>Improvement vs baseline</th><th>Improvement 95% interval</th></tr></thead><tbody id="predictuncertainty"></tbody></table>
+</div>
+<p class="sub">Positive improvement means the model has lower Brier error than the historical-rate baseline. These exploratory ranges resample whole days of held-out cases, with no refitting or future-data leakage. They do not account for dependence between days, parameter uncertainty or external validation, and must not be treated as proof that a model is better.</p>
 <h3>Probability calibration · held-out requests</h3>
 <div id="predictcalibration" class="calibrationgrid"></div>
 <details><summary>Explore logistic regression coefficients (odds ratios)</summary><div class="tablewrap"><table><thead><tr><th>Predictor</th><th>Coefficient</th><th>Odds ratio</th></tr></thead><tbody id="predictcoefs"></tbody></table></div><p class="sub">Coefficients are conditional associations, not causal effects; sample uncertainty is not estimated in this pilot.</p></details>
