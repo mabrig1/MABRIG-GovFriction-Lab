@@ -148,6 +148,22 @@ function showPrediction(){
   for(const field of [model.name,pct(m.accuracy),pct(m.balancedAccuracy),pct(m.recall),pct(m.precision),dec(m.rocAuc),m.brier.toFixed(4),m.logLoss.toFixed(4)])tr.append(make('td','',field));
   table.append(tr);
  }
+ const uncertainty=prediction.uncertainty;
+ const intervals=$('predictuncertainty');intervals.replaceChildren();
+ $('predictuncertaintywrap').hidden=uncertainty.status!=='estimated';
+ $('predictuncertaintynote').textContent=uncertainty.status==='estimated'
+  ?'Exploratory paired day-cluster bootstrap: '+int(uncertainty.n)+' held-out requests across '+int(uncertainty.distinctDays)+' creation days, '+int(uncertainty.replications)+' fixed-seed resamples. These are NOT independent external validation.'
+  :('Uncertainty estimate withheld: '+uncertainty.reason);
+ if(uncertainty.status==='estimated'){
+  const interval=v=>'['+v.lower.toFixed(4)+', '+v.upper.toFixed(4)+']';
+  for(const model of uncertainty.estimates){
+   const tr=make('tr');
+   for(const value of [model.name,model.brier.toFixed(4),interval(model.brier95),
+     model.brierImprovementVsBaseline.toFixed(4),interval(model.improvement95)])
+      tr.append(make('td','',value));
+   intervals.append(tr);
+  }
+ }
  const calibration=$('predictcalibration');calibration.replaceChildren();
  for(const model of models){
   const block=make('div','calibrationcard');block.append(make('strong','',model.name));
