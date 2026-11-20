@@ -33,6 +33,11 @@ try{
  assert.equal((await svgPromise).suggestedFilename(),'govfriction-research-chart.svg');
  await page.locator('#analyze').click();
  await page.waitForFunction(()=>!document.querySelector('#results').hidden,{timeout:30000});
+ await page.locator('#runprediction').click();
+ await page.waitForFunction(()=>!document.querySelector('#predictresults').hidden,{timeout:30000});
+ assert.ok((await page.locator('#predictuncertainty tr').count())===3,'Three model uncertainty rows expected');
+ assert.match(await page.locator('#predictuncertaintynote').textContent(),/paired day-cluster bootstrap/i);
+ assert.ok(!(await page.locator('#predictuncertaintywrap').isHidden()));
  await page.locator('#runcpu').click();
  await page.waitForFunction(()=>!document.querySelector('#cpuoutput').hidden,{timeout:30000});
  assert.ok((await page.locator('#cpugroups tr').count())>0);
