@@ -1,6 +1,7 @@
 /* Transparent, browser-only pilot models: prediction of documented nonclosure at horizon.
    Predictors are strictly available at record creation. No external model APIs. */
 import {DEFAULTS,timestamp} from './engine.mjs';
+import {pairedDayBootstrap} from './prediction-uncertainty.mjs';
 const DAY=86400000;
 const BOROUGHS=['BRONX','BROOKLYN','MANHATTAN','QUEENS','STATEN ISLAND'];
 const sigmoid=x=>x>=0?1/(1+Math.exp(-x)):Math.exp(x)/(1+Math.exp(x));
@@ -138,10 +139,12 @@ export function evaluatePredictionModels(rows,mapping,custom={}){
  const baseline={name:'Historical-rate baseline',predict:()=>baseRate};
  const logit=fitLogistic(train),bayes=fitNaiveBayes(train);
  const truth=test.map(r=>r.label);
- const modelResults=[baseline,{name:'L2-regularized logistic regression',...logit},{name:'Categorical Naive Bayes',...bayes}].map(model=>{
+ const evaluated=[baseline,{name:'L2-regularized logistic regression',...logit},{name:'Categorical Naive Bayes',...bayes}].map(model=>{
   const probabilities=test.map(model.predict),performance=metrics(truth,probabilities);
-  return {name:model.name,metrics:performance,coefficients:model.coefficients||null};
+  return {name:model.name,metrics:performance,coefficients:model.coefficients||null,probabilities};
  });
+ const uncertainty=pairedDayBootstrap(test,truth,evaluated.map(({name,probabilities})=>({name,probabilities})));
+ const modelResults=evaluated.map(({name,metrics,coefficients})=>({name,metrics,coefficients}));
  return {protocol:'predictive-nonclosure-0.1',target:'Documented nonclosure by '+cfg.horizonDays+' days',
     sourceFeatures:['Service category','Borough','Request creation weekday','Request creation hour'],
     leakageExcluded:['closed_date','status','resolution_description','future case volume','future records'],
@@ -149,13 +152,14 @@ export function evaluatePredictionModels(rows,mapping,custom={}){
       embargoStart:makeDate(trainEnd),holdoutStart:makeDate(testStart),holdoutEndExclusive:makeDate(end),
       horizonDays:cfg.horizonDays,trainingN:train.length,holdoutN:test.length,embargoN:embargo,
       trainingEventRate:baseRate,holdoutEventRate:testEvents/test.length},
-    audit:prepared.audit,models:modelResults,
+    audit:prepared.audit,models:modelResults,uncertainty,
     notes:['Scores are measured on later held-out requests, not training records.',
      'A time embargo ensures all training request outcomes matured before the holdout period.',
      'Models use creation-time features only. Closure dates define the outcome, not a predictor.',
      'ROC-AUC measures ranking discrimination; Brier and log loss assess probability quality.',
      'A 0.5 decision threshold is fixed in advance, not optimized on the holdout.',
      'Synthetic demonstration metrics are not evidence of real-world prediction accuracy.',
-     'No statistical significance test, confidence intervals or external cross-jurisdiction validation yet.',
+     'Exploratory held-out Brier intervals use paired day-cluster resampling; they are conditional on frozen models and omit cross-day dependence and training uncertainty.',
+     'No statistical significance test, confidence intervals for model parameters, or external cross-jurisdiction validation yet.',
      'No deployment, citizen risk flagging or individual decision automation is recommended on this pilot.']};
 }
