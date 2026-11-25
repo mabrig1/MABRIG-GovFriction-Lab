@@ -1,8 +1,9 @@
 import {autoMap,parseCSV,analyze,exportCSV,compareReports,DEFAULTS} from './engine.mjs';
 import {evaluatePredictionModels} from './prediction.mjs';
 import {initResearchLabs} from './extra-labs.mjs';
+import {initScholarlyMode,methodsRecord} from './scholarly.mjs';
 const $=id=>document.getElementById(id);
-let dataset=null,mapping=null,report=null,prediction=null,cpuResult=null,backendReady=false,sha=null,filename='';
+let dataset=null,mapping=null,report=null,prediction=null,cpuResult=null,backendReady=false,sha=null,filename='',sourceSynthetic=false;
 const required=['id','created','closed','agency','service','borough'];
 const titles={id:'Request ID',created:'Creation timestamp',closed:'Closure timestamp',agency:'Agency',service:'Service / problem',borough:'Borough',status:'Recorded status (optional)'};
 const int=n=>Number.isFinite(n)?n.toLocaleString('en-US'):'—';
@@ -12,12 +13,12 @@ const make=(tag,cls='',value='')=>{const node=document.createElement(tag);if(cls
 const syntheticLabel='SYNTHETIC demonstration — not NYC observations.csv';
 async function hashText(text){
  if(!globalThis.crypto?.subtle)return null;
- const bytes=new TextEncoder().encode(text),digest=await globalThis.crypto.subtle.digest('SHA-256',bytes);
+ const bytes=typeof text==='string'?new TextEncoder().encode(text):text,digest=await globalThis.crypto.subtle.digest('SHA-256',bytes);
  return [...new Uint8Array(digest)].map(v=>v.toString(16).padStart(2,'0')).join('');
 }
-async function loadCSV(text,name){
+async function loadCSV(text,name,bytes=null,synthetic=false){
  const parsed=parseCSV(text);
- dataset=parsed;mapping=autoMap(parsed.headers);filename=name;sha=await hashText(text);report=null;prediction=null;cpuResult=null;
+ dataset=parsed;mapping=autoMap(parsed.headers);filename=name;sha=await hashText(bytes??text);sourceSynthetic=synthetic;report=null;prediction=null;cpuResult=null;
  $('results').hidden=true;$('cpu').hidden=true;$('cpuoutput').hidden=true;$('cpucompareout').textContent='Independent CPU comparison not yet run.';$('predict').hidden=true;$('predictresults').hidden=true;$('predictcomparison').textContent='No independent prediction report uploaded.';$('analyze').disabled=false;$('mapping').hidden=false;
  $('filemeta').textContent=name+' · '+int(parsed.data.length)+' parsed rows · '+int(parsed.malformed)+' malformed CSV rows · SHA-256: '+(sha||'Unavailable. Serve the page via HTTPS or localhost.');
  $('compareout').textContent='Run analysis first, then select the independent Kaggle results file.';
@@ -33,13 +34,14 @@ async function loadCSV(text,name){
   select.addEventListener('change',()=>{mapping[key]=select.value});
   label.append(select);target.append(label);
  }
- extraLabs.onDataChanged(dataset);
+ extraLabs.onDataChanged(dataset);scholarly.reset();
 }
 $('file').addEventListener('change',async event=>{
  const file=event.target.files&&event.target.files[0];if(!file)return;
  try{
   if(file.size>15*1024*1024)throw Error('CSV exceeds the 15 MB pilot limit.');
-  await loadCSV(await file.text(),file.name);
+  const bytes=await file.arrayBuffer();
+  await loadCSV(new TextDecoder().decode(bytes),file.name,bytes);
  }catch(error){alert('Could not load CSV: '+error.message)}
 });
 $('weight').addEventListener('input',()=>{$('weightOut').textContent=$('weight').value+'%'});
@@ -59,13 +61,14 @@ function syntheticCSV(){
  }
  return rows.join('\n');
 }
-$('demo').addEventListener('click',async()=>{try{await loadCSV(syntheticCSV(),syntheticLabel)}catch(e){alert(e.message)}});
+$('demo').addEventListener('click',async()=>{try{await loadCSV(syntheticCSV(),syntheticLabel,null,true)}catch(e){alert(e.message)}});
 $('analyze').addEventListener('click',()=>{
  if(!dataset)return;
  try{
-  const config={from:$('from').value,to:$('to').value,snapshot:$('snapshot').value,horizonDays:Number($('horizon').value),minN:Number($('minN').value),wFriction:Number($('weight').value)/100};
+  const config=readConfig();
   report=analyze(dataset.data,mapping,config);prediction=null;cpuResult=null;
-  report.source={filename,sha256:sha,parsedRows:dataset.data.length,malformedCSVRows:dataset.malformed,synthetic:filename.startsWith('SYNTHETIC')};
+  report.source={filename,sha256:sha,parsedRows:dataset.data.length,malformedCSVRows:dataset.malformed,synthetic:sourceSynthetic||filename.startsWith('SYNTHETIC')};
+  report.mapping={...mapping};report.methods=methodsRecord(report,scholarly.frozen());scholarly.onReport();
   extraLabs.onOutputsChanged();
   showReport();$('results').hidden=false;$('cpu').hidden=false;$('cpuoutput').hidden=true;$('cpustatus').textContent='Ready to run CPU analysis locally. No records will be uploaded.';$('predict').hidden=false;$('predictresults').hidden=true;$('predictcomparison').textContent='Run prediction before importing independent model metrics.';$('predictmessage').textContent='Ready for leakage-safe temporal evaluation. The held-out test period is never used for training.';$('results').scrollIntoView({behavior:'smooth',block:'start'});
  }catch(error){alert('Analysis stopped: '+error.message)}
@@ -370,7 +373,7 @@ const extraLabs=initResearchLabs({
  getOutputs:()=>({report,cpu:cpuResult,prediction}),
  runJob:runBrowserJob,
  onMutation:(change)=>{
-  report=null;prediction=null;cpuResult=null;sha=null;
+  report=null;prediction=null;cpuResult=null;sha=null;scholarly.reset();
   for(const id of ['results','cpu','predict'])$(id).hidden=true;
   $('compareout').textContent='Data transformed: import the exported revised CSV as a new frozen source before Kaggle validation.';
   $('filemeta').textContent=filename+' · modified in browser with derived variable '+change.name+
@@ -378,3 +381,6 @@ const extraLabs=initResearchLabs({
   extraLabs.onDataChanged(dataset);
  }
 });
+
+function readConfig(){const config={from:$('from').value,to:$('to').value,snapshot:$('snapshot').value,horizonDays:Number($('horizon').value),minN:Number($('minN').value),wFriction:Number($('weight').value)/100};return config;}
+const scholarly=initScholarlyMode({getState:()=>({dataset,mapping,report,sha,filename,synthetic:sourceSynthetic||filename.startsWith('SYNTHETIC'),config:readConfig()}),download});
