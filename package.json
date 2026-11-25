@@ -7,6 +7,7 @@
   "scripts": {
     "test": "node tests/test_engine.mjs && node tests/test_prediction.mjs && node tests/test_cpu_worker.mjs && node tests/test_research_labs.mjs && node tests/test_scholarly.mjs",
     "build": "node scripts/verify_assets.mjs",
-    "deploy": "npx wrangler deploy"
+    "deploy": "npx wrangler deploy",
+    "evaluate:paper": "node scripts/evaluate_bfs_dai.mjs"
   }
 }

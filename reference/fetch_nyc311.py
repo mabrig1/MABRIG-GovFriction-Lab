@@ -9,6 +9,7 @@ import os
 import sys
 import time
 from pathlib import Path
+from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -24,6 +25,7 @@ def download(output:Path,max_records:int|None=None):
     output.parent.mkdir(parents=True,exist_ok=True)
     temporary=output.with_suffix(".partial.csv")
     total=0
+    extraction_started=datetime.now(timezone.utc).isoformat()
     try:
         with temporary.open("w",encoding="utf-8",newline="") as f:
             writer=csv.DictWriter(f,fieldnames=FIELDS)
@@ -53,7 +55,8 @@ def download(output:Path,max_records:int|None=None):
     manifest={"source":"NYC 311 from 2020 to present",
         "source_url":"https://data.cityofnewyork.us/Social-Services/311-Service-Requests/erm2-nwe9",
         "dataset_id":"erm2-nwe9","filter":WHERE,"order":"unique_key ASC",
-        "rows":total,"sha256":sha,"truncated_for_exploration":max_records is not None}
+        "rows":total,"sha256":sha,"extraction_started_utc":extraction_started,
+        "extraction_finished_utc":datetime.now(timezone.utc).isoformat(),"truncated_for_exploration":max_records is not None}
     output.with_suffix(".source.json").write_text(json.dumps(manifest,indent=2),encoding="utf-8")
     print(json.dumps(manifest,indent=2))
 

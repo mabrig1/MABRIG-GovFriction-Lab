@@ -47,3 +47,6 @@ try{
  assert.ok(errors.length===0,'Browser JavaScript errors: '+errors.join('; '));
  console.log('PASS: browser loads, synthetic data, R script export, content coding, SVG chart, CPU lab and variable invalidation');
 }finally{await browser.close();}
+
+// Paper evaluation: separate core benchmark and independent Python parity.
+await import('./evaluate_bfs_dai.mjs');
