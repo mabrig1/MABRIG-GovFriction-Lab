@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Auditable browser-first Bureaucratic Friction & Service Delivery Asymmetry research app",
   "scripts": {
-    "test": "node tests/test_engine.mjs && node tests/test_prediction.mjs && node tests/test_cpu_worker.mjs && node tests/test_research_labs.mjs && node tests/test_scholarly.mjs && node tests/test_comparative.mjs",
+    "test": "node tests/test_engine.mjs && node tests/test_prediction.mjs && node tests/test_cpu_worker.mjs && node tests/test_research_labs.mjs && node tests/test_scholarly.mjs && node tests/test_comparative.mjs && node tests/test_uncertainty.mjs",
     "build": "node scripts/verify_assets.mjs",
     "deploy": "npx wrangler deploy",
     "evaluate:paper": "node scripts/evaluate_bfs_dai.mjs"

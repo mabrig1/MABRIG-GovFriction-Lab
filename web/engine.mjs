@@ -52,7 +52,7 @@ function summarize(cases){
  const n=cases.length, nonclosure=late/n,delay=burden/n,ci=wilson(late,n);
  return {n,nonclosure30:nonclosure,delayBurden30:delay,friction:0.5*(nonclosure+delay),lateCount:late,medianClosedDays:median(closedDays),wilsonLow:ci[0],wilsonHigh:ci[1]};
 }
-export function analyze(rows,map,custom={}){
+export function prepareCohort(rows,map,custom={}){
  const cfg={...DEFAULTS,...custom}, required=['id','created','closed','agency','service','borough'];
  for(const k of required)if(!map[k])throw Error('Map the required column: '+k);
  if(new Set(required.map(k=>map[k])).size!==required.length)throw Error('Each required field must map to a distinct column');
@@ -75,9 +75,18 @@ export function analyze(rows,map,custom={}){
   if(snapshot-created<cfg.horizonDays*86400000){counts.immature++;continue}
   if(v('status').toLowerCase()==='closed'&&!rawClosed)counts.statusClosedWithoutDate++;
   const days=closed===null||closed>snapshot?Infinity:(closed-created)/86400000;
-  good.push({service,borough,days,horizon:cfg.horizonDays});
+  good.push({service,borough,days,horizon:cfg.horizonDays,creationDay:new Date(created).toISOString().slice(0,10)});
  }
  counts.eligible=good.length;
+ return {config:cfg,counts,cases:good};
+}
+export function analyze(rows,map,custom={}){
+ return analyzePrepared(prepareCohort(rows,map,custom));
+}
+// Internal prepared-cohort path; the supplied cases must meet the original maturity horizon.
+export function analyzePrepared(prepared,horizon=prepared.config.horizonDays){
+ if(!Number.isInteger(horizon)||horizon<1||horizon>prepared.config.horizonDays)throw Error('Prepared cohort cannot extend beyond its maturity horizon');
+ const cfg={...prepared.config,horizonDays:horizon},counts={...prepared.counts},good=prepared.cases.map(g=>({...g,horizon}));
  const groups=new Map(),byService=new Map();
  for(const g of good){
   const key=g.service+'\u001f'+g.borough;
