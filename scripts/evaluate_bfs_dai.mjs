@@ -107,7 +107,7 @@ try{
   assert.equal(requests.length,0,'Unexpected network request during core execution');
   const med=field=>got.timings.map(t=>t[field]).sort((a,b)=>a-b)[2];
   const evidence={synthetic,nominal_fixture_size:size,source_sha256:sha(bytes),bytes:bytes.length,parsed_rows:expected.parsed_rows,malformed_rows:expected.malformed_csv_rows,audit:expected.primary_counts,groups:got.report.groups.length,group_specifications:got.sens.rows.length,max_absolute_numeric_difference:maxError,core_network_requests:requests.length,median_ms:{parse:med('parse_ms'),primary_with_protocol:med('primary_ms'),sensitivity:med('sensitivity_ms')},all_timings_ms:got.timings,source_manifest:provenance};
-  results.push(evidence);
+  results.push({...evidence,primary_groups:got.report.groups,sensitivity_groups:got.sens.rows,methods:got.report.methods});
   console.log('BFS-DAI_EVALUATION '+JSON.stringify(evidence));
  }
  const evidence={schema:'bfs-dai-evaluation-1',engine:'bfs-dai-0.1',browser:browserVersion,node:process.version,python:spawnSync(process.env.PYTHON||'python',['--version'],{encoding:'utf8'}).stdout.trim(),os:os.platform()+' '+os.release(),cpu:os.cpus()[0]?.model,cpu_count:os.cpus().length,memory_bytes:os.totalmem(),snapshot,software_commit:process.env.GITHUB_SHA||spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim(),limits:['One machine and Chromium engine; timing includes protocol work but excludes transfer, rendering and download.','Zero observed requests during controlled core module execution is not a comprehensive privacy audit.','No comparative usability or causal validity established.'],results};
