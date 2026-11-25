@@ -38,6 +38,13 @@ try{
  const figPromise=page.waitForEvent('download');
  await page.getByRole('button',{name:'Publication figure SVG'}).click();
  assert.equal((await figPromise).suggestedFilename(),'govfriction-comparative.svg');
+ await page.getByRole('button',{name:'Run common-cohort sensitivity'}).click();
+ assert.match(await page.locator('#uncertainty-lab').textContent(),/Common eligible:/);
+ await page.getByRole('button',{name:'Run composite day bootstrap'}).click();
+ assert.match(await page.locator('#uncertainty-lab').textContent(),/499 paired creation-day/);
+ const bootPromise=page.waitForEvent('download');
+ await page.getByRole('button',{name:'Bootstrap JSON'}).click();
+ assert.equal((await bootPromise).suggestedFilename(),'govfriction-composite-bootstrap.json');
  await page.locator('#runcpu').click();
  await page.waitForFunction(()=>!document.querySelector('#cpuoutput').hidden,{timeout:30000});
  assert.ok((await page.locator('#cpugroups tr').count())>0);

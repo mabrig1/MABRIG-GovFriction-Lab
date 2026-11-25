@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {analyze,DEFAULTS,prepareCohort,analyzePrepared} from '../web/engine.mjs';
+import {commonCohortSensitivity,compositeBootstrap} from '../web/uncertainty.mjs';
+const mapping={id:'id',created:'created',closed:'closed',agency:'agency',service:'service',borough:'borough'};
+const make=(id,day,borough,closed='')=>({id:String(id),created:day,closed,agency:'DSNY',service:'Graffiti',borough});
+const rows=[];
+for(let i=1;i<=12;i++){const d='2025-01-'+String(i).padStart(2,'0');rows.push(make(i,d,'BRONX',d),make(100+i,d,'QUEENS'))}
+const cfg={...DEFAULTS,minN:1};
+const source={sha256:'a'.repeat(64),synthetic:true};
+const primary=analyze(rows,mapping,cfg);primary.source=source;
+assert.deepEqual(analyzePrepared(prepareCohort(rows,mapping,cfg)).groups,primary.groups);
+assert.throws(()=>analyzePrepared(prepareCohort(rows,mapping,cfg),31));
+const common=commonCohortSensitivity(rows,mapping,primary);
+assert.equal(common.commonEligible,24);assert.equal(common.rows.length,60);
+assert.ok(common.rows.every(r=>r.eligibleTotal===24&&r.n===12));
+const boot=compositeBootstrap(rows,mapping,primary,{replications:99});
+assert.deepEqual(boot,compositeBootstrap(rows,mapping,primary,{replications:99}));
+const bronx=boot.rows.find(r=>r.borough==='BRONX'),queens=boot.rows.find(r=>r.borough==='QUEENS');
+assert.ok(Math.abs(bronx.scoreLow-30)<1e-9&&Math.abs(bronx.scoreHigh-30)<1e-9);
+assert.ok(Math.abs(queens.scoreLow-100)<1e-9&&Math.abs(queens.scoreHigh-100)<1e-9);
+assert.equal(bronx.signedGapLow,-100);assert.equal(queens.signedGapHigh,100);assert.equal(bronx.validReplications,99);
+const shortRows=[...rows,make('new','2025-03-25','BRONX'),make('dup','2025-03-25','QUEENS'),make('dup','2025-01-02','QUEENS')];
+const near=analyze(shortRows,mapping,{...cfg,snapshot:'2025-05-01'});near.source=source;
+const restricted=commonCohortSensitivity(shortRows,mapping,near);
+assert.equal(restricted.ordinaryPrimaryEligible,26);assert.equal(restricted.commonEligible,24);assert.ok(restricted.rows.every(r=>r.eligibleTotal===24));assert.equal(restricted.commonAudit.duplicate,1);
+const tiny=analyze(rows.slice(0,4),mapping,cfg);tiny.source=source;assert.ok(compositeBootstrap(rows.slice(0,4),mapping,tiny,{replications:99}).rows.every(r=>r.scoreLow===null));
+assert.throws(()=>compositeBootstrap(rows.slice(1),mapping,primary,{replications:99}));
+console.log('PASS: same-cohort eligibility, dedup ordering, paired day bootstrap, suppression and reproducibility');
