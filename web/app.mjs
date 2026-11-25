@@ -2,6 +2,7 @@ import {autoMap,parseCSV,analyze,exportCSV,compareReports,DEFAULTS} from './engi
 import {evaluatePredictionModels} from './prediction.mjs';
 import {initResearchLabs} from './extra-labs.mjs';
 import {initScholarlyMode,methodsRecord} from './scholarly.mjs';
+import {initComparativeObservatory} from './comparative.mjs';
 const $=id=>document.getElementById(id);
 let dataset=null,mapping=null,report=null,prediction=null,cpuResult=null,backendReady=false,sha=null,filename='',sourceSynthetic=false;
 const required=['id','created','closed','agency','service','borough'];
@@ -68,7 +69,7 @@ $('analyze').addEventListener('click',()=>{
   const config=readConfig();
   report=analyze(dataset.data,mapping,config);prediction=null;cpuResult=null;
   report.source={filename,sha256:sha,parsedRows:dataset.data.length,malformedCSVRows:dataset.malformed,synthetic:sourceSynthetic||filename.startsWith('SYNTHETIC')};
-  report.mapping={...mapping};report.methods=methodsRecord(report,scholarly.frozen());scholarly.onReport();
+  report.mapping={...mapping};report.methods=methodsRecord(report,scholarly.frozen());scholarly.onReport();observatory.render();
   extraLabs.onOutputsChanged();
   showReport();$('results').hidden=false;$('cpu').hidden=false;$('cpuoutput').hidden=true;$('cpustatus').textContent='Ready to run CPU analysis locally. No records will be uploaded.';$('predict').hidden=false;$('predictresults').hidden=true;$('predictcomparison').textContent='Run prediction before importing independent model metrics.';$('predictmessage').textContent='Ready for leakage-safe temporal evaluation. The held-out test period is never used for training.';$('results').scrollIntoView({behavior:'smooth',block:'start'});
  }catch(error){alert('Analysis stopped: '+error.message)}
@@ -384,3 +385,5 @@ const extraLabs=initResearchLabs({
 
 function readConfig(){const config={from:$('from').value,to:$('to').value,snapshot:$('snapshot').value,horizonDays:Number($('horizon').value),minN:Number($('minN').value),wFriction:Number($('weight').value)/100};return config;}
 const scholarly=initScholarlyMode({getState:()=>({dataset,mapping,report,sha,filename,synthetic:sourceSynthetic||filename.startsWith('SYNTHETIC'),config:readConfig()}),download});
+
+const observatory=initComparativeObservatory({getReport:()=>report,download});
