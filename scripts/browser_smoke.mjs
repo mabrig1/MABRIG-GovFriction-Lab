@@ -33,6 +33,11 @@ try{
  assert.equal((await svgPromise).suggestedFilename(),'govfriction-research-chart.svg');
  await page.locator('#analyze').click();
  await page.waitForFunction(()=>!document.querySelector('#results').hidden,{timeout:30000});
+ assert.ok(await page.locator('#comparative-observatory table').count()===2);
+ assert.match(await page.locator('#comparative-observatory').textContent(),/SYNTHETIC/);
+ const figPromise=page.waitForEvent('download');
+ await page.getByRole('button',{name:'Publication figure SVG'}).click();
+ assert.equal((await figPromise).suggestedFilename(),'govfriction-comparative.svg');
  await page.locator('#runcpu').click();
  await page.waitForFunction(()=>!document.querySelector('#cpuoutput').hidden,{timeout:30000});
  assert.ok((await page.locator('#cpugroups tr').count())>0);
